@@ -143,6 +143,44 @@ namespace DistributePrintJobs
                     Send404(context.Response);
                 }
             }
+            else if (context.Request.HttpMethod == "POST")
+            {
+                if (context.Request.Url.AbsolutePath == "/dojob")
+                {
+                    // get the parameters
+                    var parameterBody = BinaryStreamReader.ReadStreamToEnd(context.Request.InputStream);
+
+                    // decode them
+                    var parameterString = Encoding.Default.GetString(parameterBody);
+
+                    // split them up
+                    var parameters = Util.DecodeUriParameters(parameterString);
+
+                    if (!parameters.ContainsKey("do"))
+                    {
+                        Send404(context.Response);
+                        return;
+                    }
+
+                    var doParam = parameters["do"];
+                    if (doParam == "sendJobToPrinter")
+                    {
+                        // TODO
+                    }
+                    else if (doParam == "removeJob")
+                    {
+                        // TODO
+                    }
+                    else if (doParam == "resetJob")
+                    {
+                        // TODO
+                    }
+                    else
+                    {
+                        Send404(context.Response);
+                    }
+                }
+            }
             else
             {
                 Send404(context.Response);

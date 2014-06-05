@@ -31,6 +31,20 @@
       }
     }).post({ 'do': 'removeJob', 'jobID': jobID });
   }
+
+  function resetJob(jobID)
+  {
+    var json = new Request.JSON({
+      url: '/dojob',
+      onSuccess: function (response) {
+        if (response.status == 'success') {
+          window.location.reload();
+        } else if (response.status == 'error') {
+
+        }
+      }
+    }).post({ 'do': 'resetJob', 'jobID': jobID });
+  }
 </script>
 {% endblock %}
 {% block content %}
@@ -60,8 +74,9 @@
           {% endfor %}
         {% elsif job.status_code == 2 %}
         gesendet an {{ printers[job.target_printer_id_value].short_name | escape }}
+        <button class="resetjob" type="button" onclick="resetJob({{ job.job_id }})">&#10227;</button>
         {% else %}
-        BOLLOCKS
+        ???
         {% endif %}
       </td>
       <td>
