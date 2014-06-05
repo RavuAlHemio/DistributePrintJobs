@@ -12,7 +12,7 @@ namespace DistributePrintJobs
     /// Sends print requests via the Line Printer Daemon protocol.
     /// </summary>
     /// <remarks>See RFC1179 for a documentation of the protocol.</remarks>
-    class LpdSender
+    class LpdSender : ISender
     {
         class BadResponseException : Exception
         {
@@ -32,7 +32,7 @@ namespace DistributePrintJobs
             JobCounter = 0;
         }
 
-        public IPEndPoint EndPoint { get; set; }
+        public IPAddress Address { get; set; }
         public string QueueName { get; set; }
         private int JobCounter { get; set; }
 
@@ -50,7 +50,7 @@ namespace DistributePrintJobs
         {
             // connect to server
             var client = new TcpClient();
-            client.Connect(EndPoint);
+            client.Connect(Address, 515);
             var stream = client.GetStream();
 
             var message = new List<byte>();
@@ -139,7 +139,6 @@ namespace DistributePrintJobs
             }
 
             // close
-            stream.Close();
             client.Close();
         }
     }

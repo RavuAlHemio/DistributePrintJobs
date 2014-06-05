@@ -1,0 +1,74 @@
+﻿{% extends "base" %}
+{% block title %}Druckjobs{% endblock %}
+{% block heading %}Druckjobs{% endblock %}
+{% block addhead %}
+<script type="text/javascript" src="/static/mootools-core-1.5.0-full-nocompat.js"></script>
+<script type="text/javascript">
+  function sendJobToPrinter(jobID, printerID)
+  {
+    var json = new Request.JSON({
+      url: '/dojob',
+      onSuccess: function (response) {
+        if (response.status == 'success') {
+          window.location.reload();
+        } else if (response.status == 'error') {
+
+        }
+      }
+    }).post({ 'do': 'sendJobToPrinter', 'jobID': jobID, 'printerID': printerID });
+  }
+
+  function removeJob(jobID)
+  {
+    var json = new Request.JSON({
+      url: '/dojob',
+      onSuccess: function (response) {
+        if (response.status == 'success') {
+          window.location.reload();
+        } else if (response.status == 'error') {
+
+        }
+      }
+    }).post({ 'do': 'removeJob', 'jobID': jobID });
+  }
+</script>
+{% endblock %}
+{% block content %}
+<p class="error"></p>
+<table>
+  <thead>
+    <tr>
+      <th>Datum/Uhrzeit</th>
+      <th>User</th>
+      <th>Dateiname</th>
+      <!-- <th>Rechner</th> -->
+      <th colspan="2">Aktionen</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for job in jobs %}
+    <tr>
+      <td>{{ job.time_of_arrival | escape }}</td>
+      <td>{{ job.user_name | escape }}</td>
+      <td>{{ job.document_name | escape }}</td>
+      <!-- <td>{{ job.host_name | escape }}</td> -->
+      <td>
+        {{ job.status_string }}
+        {% if job.status_code == 1 %}
+          {% for printer in printers %}
+        <button class="sendtoprinter" type="button" onclick="sendJobToPrinter({{ job.job_id }}, {{ printer.printer_id }})">&#8594; {{ printer.short_name | escape }}</button>
+          {% endfor %}
+        {% elsif job.status_code == 2 %}
+        gesendet an {{ printers[job.target_printer_id_value].short_name | escape }}
+        {% else %}
+        BOLLOCKS
+        {% endif %}
+      </td>
+      <td>
+        <button class="remove" type="button" onclick="removeJob({{ job.job_id }})">&#10006;</button>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

@@ -16,9 +16,13 @@ namespace DistributePrintJobs
     /// <remarks>See RFC1179 for a documentation of the protocol.</remarks>
     class LpdListener
     {
+        private TcpListener Listener;
+
         public static JobInfo ParseJobInfo(string jobInfoString, Dictionary<string, byte[]> dataFiles)
         {
             var ret = new JobInfo();
+            ret.Status = JobInfo.JobStatus.ReadyToPrint;
+            ret.TimeOfArrival = DateTime.Now;
 
             foreach (var line in jobInfoString.Split('\n'))
             {
@@ -555,7 +559,7 @@ namespace DistributePrintJobs
             }
 
             // decode the control file
-            var controlString = Encoding.Default.GetString(jobFiles["controlFileName"]);
+            var controlString = Encoding.Default.GetString(jobFiles[controlFileName]);
 
             // parse it, with all the magic
             JobInfo jobInfo;
@@ -575,13 +579,13 @@ namespace DistributePrintJobs
             OnNewJobReceived(jobInfo);
         }
 
-        internal void ListenProc()
+        void ListenProc()
         {
-            var lpdListener = new TcpListener(IPAddress.Any, 515);
-            lpdListener.Start();
+            Listener = new TcpListener(IPAddress.Any, 515);
+            Listener.Start();
             for (; ; )
             {
-                var client = lpdListener.AcceptTcpClient();
+                var client = Listener.AcceptTcpClient();
                 var stream = client.GetStream();
                 ThreadPool.QueueUserWorkItem((state) =>
                 {
@@ -589,6 +593,16 @@ namespace DistributePrintJobs
                     catch (Exception e) { Console.Error.WriteLine(e.ToString()); }
                 });
             }
+        }
+
+        internal void Start()
+        {
+            new Thread(new ThreadStart(ListenProc)).Start();
+        }
+
+        internal void Stop()
+        {
+            Listener.Stop();
         }
     }
 }
