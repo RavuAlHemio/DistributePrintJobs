@@ -111,15 +111,24 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Templates\_base.liquid" />
-    <None Include="Templates\jobs.liquid" />
+    <DotLiquidTemplates Include="Templates\*.liquid" />
+  </ItemGroup>
+  <ItemGroup>
+    <StaticServedFiles Include="Static\mootools-core-1.5.0-full-nocompat.js" />
+    <StaticServedFiles Include="Static\style.css" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProgramConfigurationFiles Include="Config.json" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
   </Target>
-  <Target Name="AfterBuild">
-  </Target>
   -->
+  <Target Name="AfterBuild">
+    <Copy SourceFiles="@(DotLiquidTemplates)" DestinationFolder="$(OutputPath)\Templates" />
+	<Copy SourceFiles="@(StaticServedFiles)" DestinationFolder="$(OutputPath)\Static" />
+	<Copy SourceFiles="@(ProgramConfigurationFiles)" DestinationFolder="$(OutputPath)" />
+  </Target>
 </Project>

@@ -1,0 +1,36 @@
+body
+{
+	font-family: "Helvetica", "Arial", sans-serif;
+}
+
+.error
+{
+	color: red;
+}
+
+td, th
+{
+	text-align: left;
+	padding-right: 1em;
+	vertical-align: middle;
+}
+
+td.docname
+{
+	max-width: 20em;
+}
+
+tr:hover
+{
+	background-color: #eee;
+}
+
+button
+{
+	font-size: 110%;
+}
+
+button.remove
+{
+	color: red;
+}
