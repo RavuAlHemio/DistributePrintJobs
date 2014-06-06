@@ -52,10 +52,10 @@ namespace DistributePrintJobs
             public string ShortName { get { return Info.ShortName; } }
         }
 
-        public HttpListener()
+        public HttpListener(int listenPort)
         {
             Listener = new System.Net.HttpListener();
-            Listener.Prefixes.Add("http://+:8080/");
+            Listener.Prefixes.Add("http://+:" + listenPort + "/");
 
             Template.FileSystem = new DotLiquid.FileSystems.LocalFileSystem(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Templates"));
             

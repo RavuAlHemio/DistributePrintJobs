@@ -33,7 +33,7 @@ namespace DistributePrintJobs
             JobCounter = 0;
         }
 
-        public IPAddress Address { get; set; }
+        public string Host { get; set; }
         public string QueueName { get; set; }
         private int JobCounter { get; set; }
 
@@ -51,7 +51,7 @@ namespace DistributePrintJobs
         {
             // connect to server
             var client = new TcpClient();
-            client.Connect(Address, 515);
+            client.Connect(Host, 515);
             var stream = client.GetStream();
 
             var message = new List<byte>();

@@ -23,16 +23,7 @@ namespace DistributePrintJobs
             };
             ServiceBase.Run(ServicesToRun);
 #else
-            // TODO: read printers from a config file
-
-            var prtSender = new LpdSender();
-            prtSender.QueueName = "LOL";
-            prtSender.Address = IPAddress.Parse("127.0.0.1");
-            var prt = new PrinterInfo();
-            prt.ShortName = "one";
-            prt.Sender = prtSender;
-            Management.AddPrinter(prt);
-
+            Config.LoadConfig();
             Management.ReadJobs();
 
             var lpdListener = new LpdListener();
@@ -42,7 +33,7 @@ namespace DistributePrintJobs
             };
             lpdListener.Start();
 
-            var httpListener = new HttpListener();
+            var httpListener = new HttpListener(Config.HttpListenPort);
             httpListener.Start();
 #endif
         }
