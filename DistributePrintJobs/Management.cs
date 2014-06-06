@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -42,11 +43,37 @@ namespace DistributePrintJobs
             }
         }
 
+        public static void RemovePrinter(uint printerID)
+        {
+            lock (ManagementLock)
+            {
+                PrinterDictionary.Remove(printerID);
+            }
+        }
+
         public static void AddJob(JobInfo info)
         {
             lock (ManagementLock)
             {
                 JobDictionary[info.JobID] = info;
+            }
+        }
+
+        public static void RemoveJob(uint jobID)
+        {
+            JobInfo job;
+
+            // remove the job (under the lock)
+            lock (ManagementLock)
+            {
+                job = JobDictionary[jobID];
+                JobDictionary.Remove(jobID);
+            }
+
+            // delete the data file
+            if (job.DataFilePath != null)
+            {
+                File.Delete(job.DataFilePath);
             }
         }
     }

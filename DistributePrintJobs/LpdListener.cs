@@ -18,7 +18,7 @@ namespace DistributePrintJobs
     {
         private TcpListener Listener;
 
-        public static JobInfo ParseJobInfo(string jobInfoString, Dictionary<string, byte[]> dataFiles)
+        public static JobInfo ParseJobInfo(string jobInfoString, Dictionary<string, string> dataFilePaths, Dictionary<string, long> dataFileSizes)
         {
             var ret = new JobInfo();
             ret.Status = JobInfo.JobStatus.ReadyToPrint;
@@ -30,7 +30,7 @@ namespace DistributePrintJobs
                 {
                     continue;
                 }
-
+                
                 var letter = line[0];
                 var param = line.Substring(1);
                 switch (letter)
@@ -48,10 +48,12 @@ namespace DistributePrintJobs
                         ret.DocumentName = param;
                         break;
                     case (char)ControlFileCharacters.PrintFileWithControlCharacters:
-                        ret.Data = dataFiles[param];
+                        ret.DataFilePath = dataFilePaths[param];
+                        ret.DataFileSize = dataFileSizes[param];
                         break;
                     case (char)ControlFileCharacters.UnlinkDataFile:
-                        dataFiles.Remove(param);
+                        dataFilePaths.Remove(param);
+                        dataFileSizes.Remove(param);
                         break;
                     case (char)ControlFileCharacters.PlotCifFile:
                     case (char)ControlFileCharacters.PrintDviFile:
@@ -284,7 +286,7 @@ namespace DistributePrintJobs
             }
         }
 
-        private byte[] ReadUntilByte(byte thisByte, NetworkStream stream)
+        private static byte[] ReadUntilByte(byte thisByte, NetworkStream stream)
         {
             var bytes = new List<byte>();
             for (; ; )
@@ -306,7 +308,7 @@ namespace DistributePrintJobs
             }
         }
 
-        private byte[] ReadBytes(int count, NetworkStream stream)
+        private static byte[] ReadBytes(int count, NetworkStream stream)
         {
             var ret = new byte[count];
             int offset = 0;
@@ -326,7 +328,7 @@ namespace DistributePrintJobs
             return ret;
         }
 
-        private byte[] ReadUntilEnd(NetworkStream stream)
+        private static byte[] ReadUntilEnd(NetworkStream stream)
         {
             var ret = new List<byte>();
             var buf = new byte[1024];
@@ -344,32 +346,32 @@ namespace DistributePrintJobs
             }
         }
 
-        private byte[] ReadUntilLineFeed(NetworkStream stream)
+        private static byte[] ReadUntilLineFeed(NetworkStream stream)
         {
             return ReadUntilByte(0x0A, stream);
         }
 
-        private byte[] ReadUntilNulByte(NetworkStream stream)
+        private static byte[] ReadUntilNulByte(NetworkStream stream)
         {
             return ReadUntilByte(0x00, stream);
         }
 
-        private void ReturnSuccess(NetworkStream stream)
+        private static void ReturnSuccess(NetworkStream stream)
         {
             stream.WriteByte(0x00);
         }
 
-        private void ReturnInvalidSyntax(NetworkStream stream)
+        private static void ReturnInvalidSyntax(NetworkStream stream)
         {
             stream.WriteByte(0x01);
         }
 
-        private void ReturnUnsupportedPrintType(NetworkStream stream)
+        private static void ReturnUnsupportedPrintType(NetworkStream stream)
         {
             stream.WriteByte(0x02);
         }
 
-        private string GetSingleStringArgument(byte[] command)
+        private static string GetSingleStringArgument(byte[] command)
         {
             var stringArgument = Encoding.Default.GetString(command, 1, command.Length - 1);
             if (stringArgument.EndsWith("\n"))
@@ -377,6 +379,11 @@ namespace DistributePrintJobs
                 stringArgument = stringArgument.Substring(0, stringArgument.Length - 1);
             }
             return stringArgument;
+        }
+
+        private static string GetJobDataFilename(ulong jobID, string lpdDataFilename)
+        {
+            return string.Format("{0:04X}-{1}.dat", jobID, lpdDataFilename);
         }
 
         private void HandleConnection(NetworkStream stream)
@@ -430,7 +437,12 @@ namespace DistributePrintJobs
         private void HandleJobSubmission(NetworkStream stream)
         {
             var jobFiles = new Dictionary<string, byte[]>();
+            var jobFileReferences = new Dictionary<string, string>();
+            var jobFileLengths = new Dictionary<string, long>();
             string controlFileName = null;
+
+            // create a new job, reserving a new job ID
+            var jobInfo = new JobInfo();
 
             for (; ; )
             {
@@ -511,10 +523,10 @@ namespace DistributePrintJobs
                         }
 
                         var length = int.Parse(dataFileData[0]);
-                        var dataFileName = dataFileData[1];
+                        var lpdDataFileName = dataFileData[1];
 
                         // parse the name
-                        var dataFileNameMatch = DataFileNamePattern.Match(dataFileName);
+                        var dataFileNameMatch = DataFileNamePattern.Match(lpdDataFileName);
 
                         if (!dataFileNameMatch.Success)
                         {
@@ -525,21 +537,23 @@ namespace DistributePrintJobs
                         // must send this so that the client responds
                         ReturnSuccess(stream);
 
+                        var outFileName = Path.Combine("Jobs", GetJobDataFilename(jobInfo.JobID, lpdDataFileName));
+                        using (var outStream = new FileStream(outFileName, FileMode.CreateNew))
+                        {
+                            long? copyLength = (length == 0) ? (long?)null : (long?)length;
+                            long actualLength = Util.CopyStream(stream, outStream, copyLength);
+
+                            jobFileReferences[lpdDataFileName] = outFileName;
+                            jobFileLengths[lpdDataFileName] = actualLength;
+                        }
+
                         if (length == 0)
                         {
-                            var dataBytes = ReadUntilEnd(stream);
-
-                            jobFiles[dataFileName] = dataBytes;
-
                             // "thanks!"
                             ReturnSuccess(stream);
                         }
                         else
                         {
-                            var dataBytes = ReadBytes(length, stream);
-
-                            jobFiles[dataFileName] = dataBytes;
-
                             // read the last byte
                             var b = stream.ReadByte();
                             if (b == 0)
@@ -562,10 +576,9 @@ namespace DistributePrintJobs
             var controlString = Encoding.Default.GetString(jobFiles[controlFileName]);
 
             // parse it, with all the magic
-            JobInfo jobInfo;
             try
             {
-                jobInfo = ParseJobInfo(controlString, jobFiles);
+                jobInfo = ParseJobInfo(controlString, jobFileReferences, jobFileLengths);
             }
             catch (FormatException)
             {

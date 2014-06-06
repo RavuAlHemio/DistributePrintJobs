@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -113,7 +114,7 @@ namespace DistributePrintJobs
 
             // send the data file metadata
             message.Add(0x03);
-            message.AddRange(Encoding.ASCII.GetBytes(job.Data.Length.ToString()));
+            message.AddRange(Encoding.ASCII.GetBytes(job.DataFileSize.ToString()));
             message.Add(0x20);
             message.AddRange(Encoding.ASCII.GetBytes(dataFileName));
             message.Add(0x0A);
@@ -127,8 +128,12 @@ namespace DistributePrintJobs
                 throw new BadResponseException("preparing to send data", b);
             }
 
+            using (var inStream = new FileStream(job.DataFilePath, FileMode.Open))
+            {
+                Util.CopyStream(inStream, stream, job.DataFileSize);
+            }
+
             // send the data
-            stream.Write(job.Data, 0, job.Data.Length);
             stream.WriteByte(0x00);
 
             // read ACK

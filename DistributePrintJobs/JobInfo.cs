@@ -73,23 +73,15 @@ namespace DistributePrintJobs
         /// </summary>
         public string DocumentName { get; set; }
 
-        private byte[] DataBytes;
+        /// <summary>
+        /// The path to the document data file.
+        /// </summary>
+        public string DataFilePath { get; set; }
 
         /// <summary>
-        /// The bytes comprising the document.
+        /// The size of the data file.
         /// </summary>
-        public byte[] Data
-        {
-            get
-            {
-                return DataBytes.Clone() as byte[];
-            }
-
-            set
-            {
-                DataBytes = value.Clone() as byte[];
-            }
-        }
+        public long DataFileSize { get; set; }
 
         /// <summary>
         /// The ID of the printer to which this job has been sent.
