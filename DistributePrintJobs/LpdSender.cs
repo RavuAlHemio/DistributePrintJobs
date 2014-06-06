@@ -58,8 +58,8 @@ namespace DistributePrintJobs
             int b;
 
             int thisJobNumber = IncrementJobCounter();
-            var dataFileName = string.Format("dfA{0:03}{1}\n", thisJobNumber, job.HostName);
-            var controlFileName = string.Format("cfA{0:03}{1}\n", thisJobNumber, job.HostName);
+            var dataFileName = string.Format("dfA{0:D3}{1}", thisJobNumber, job.HostName);
+            var controlFileName = string.Format("cfA{0:D3}{1}", thisJobNumber, job.HostName);
             
             // initiate the print request
             message.Add(0x02);

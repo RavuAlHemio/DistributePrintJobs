@@ -1,11 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Serialization;
 using System.Text;
 using System.Threading;
+using Newtonsoft.Json;
 
 namespace DistributePrintJobs
 {
+    [JsonObject(MemberSerialization.OptIn)]
     class JobInfo
     {
         /// <summary>
@@ -43,49 +46,71 @@ namespace DistributePrintJobs
             TargetPrinterID = null;
         }
 
+        [OnDeserialized]
+        internal void JsonDeserialized(StreamingContext context)
+        {
+            // assign new job ID without causing a conflict
+            lock (NextJobIDLock)
+            {
+                if (JobID >= NextJobID)
+                {
+                    NextJobID = JobID + 1;
+                }
+            }
+        }
+
         /// <summary>
         /// The ID of this job.
         /// </summary>
+        [JsonProperty]
         public ulong JobID { get; private set; }
 
         /// <summary>
         /// What status the job is currently in.
         /// </summary>
+        [JsonProperty]
         public JobStatus Status { get; set; }
 
         /// <summary>
         /// The date/time when this print job arrived.
         /// </summary>
+        [JsonProperty]
         public DateTime TimeOfArrival { get; set; }
 
         /// <summary>
         /// The hostname of the computer which printed this document.
         /// </summary>
+        [JsonProperty]
         public string HostName { get; set; }
 
         /// <summary>
         /// The username of the user who printed this document.
         /// </summary>
+        [JsonProperty]
         public string UserName { get; set; }
 
         /// <summary>
         /// The filename or title of the document being printed.
         /// </summary>
+        [JsonProperty]
         public string DocumentName { get; set; }
 
         /// <summary>
         /// The path to the document data file.
         /// </summary>
+        [JsonProperty]
         public string DataFilePath { get; set; }
 
         /// <summary>
         /// The size of the data file.
         /// </summary>
+        [JsonProperty]
         public long DataFileSize { get; set; }
 
         /// <summary>
         /// The ID of the printer to which this job has been sent.
         /// </summary>
+        [JsonProperty]
         public uint? TargetPrinterID { get; set; }
 
         /*

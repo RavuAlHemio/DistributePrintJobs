@@ -23,6 +23,8 @@ namespace DistributePrintJobs
             };
             ServiceBase.Run(ServicesToRun);
 #else
+            // TODO: read printers from a config file
+
             var prtSender = new LpdSender();
             prtSender.QueueName = "LOL";
             prtSender.Address = IPAddress.Parse("127.0.0.1");
@@ -30,6 +32,8 @@ namespace DistributePrintJobs
             prt.ShortName = "one";
             prt.Sender = prtSender;
             Management.AddPrinter(prt);
+
+            Management.ReadJobs();
 
             var lpdListener = new LpdListener();
             lpdListener.NewJobReceived += (sender, newJobInfo) =>

@@ -26,7 +26,7 @@
         if (response.status == 'success') {
           window.location.reload();
         } else if (response.status == 'error') {
-
+          document.id('error').set('text', response.error);
         }
       }
     }).post({ 'do': 'removeJob', 'jobID': jobID });
@@ -40,11 +40,13 @@
         if (response.status == 'success') {
           window.location.reload();
         } else if (response.status == 'error') {
-
+          document.id('error').set('text', response.error);
         }
       }
     }).post({ 'do': 'resetJob', 'jobID': jobID });
   }
+
+  window.setTimeout('window.location.reload()', 5000);
 </script>
 {% endblock %}
 {% block content %}
@@ -62,18 +64,18 @@
   <tbody>
     {% for job in jobs %}
     <tr>
-      <td>{{ job.time_of_arrival | escape }}</td>
-      <td>{{ job.user_name | escape }}</td>
-      <td>{{ job.document_name | escape }}</td>
-      <!-- <td>{{ job.host_name | escape }}</td> -->
-      <td>
+      <td class="arrivaltime">{{ job.time_of_arrival | escape }}</td>
+      <td class="username">{{ job.user_name | escape }}</td>
+      <td class="docname">{{ job.document_name | escape }}</td>
+      <!-- <td class="hostname">{{ job.host_name | escape }}</td> -->
+      <td class="jobstatus">
         {{ job.status_string }}
         {% if job.status_code == 1 %}
           {% for printer in printers %}
         <button class="sendtoprinter" type="button" onclick="sendJobToPrinter({{ job.job_id }}, {{ printer.printer_id }})">&#8594; {{ printer.short_name | escape }}</button>
           {% endfor %}
         {% elsif job.status_code == 2 %}
-        gesendet an {{ printers[job.target_printer_id_value].short_name | escape }}
+        gesendet an <em>{{ job.target_printer_short_name | escape }}</em>
         <button class="resetjob" type="button" onclick="resetJob({{ job.job_id }})">&#10227;</button>
         {% else %}
         ???

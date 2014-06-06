@@ -18,11 +18,10 @@ namespace DistributePrintJobs
     {
         private TcpListener Listener;
 
-        public static JobInfo ParseJobInfo(string jobInfoString, Dictionary<string, string> dataFilePaths, Dictionary<string, long> dataFileSizes)
+        public static JobInfo ParseJobInfo(JobInfo jobInfo, string jobInfoString, Dictionary<string, string> dataFilePaths, Dictionary<string, long> dataFileSizes)
         {
-            var ret = new JobInfo();
-            ret.Status = JobInfo.JobStatus.ReadyToPrint;
-            ret.TimeOfArrival = DateTime.Now;
+            jobInfo.Status = JobInfo.JobStatus.ReadyToPrint;
+            jobInfo.TimeOfArrival = DateTime.Now;
 
             foreach (var line in jobInfoString.Split('\n'))
             {
@@ -36,20 +35,20 @@ namespace DistributePrintJobs
                 switch (letter)
                 {
                     case (char)ControlFileCharacters.HostName:
-                        ret.HostName = param;
+                        jobInfo.HostName = param;
                         break;
                     case (char)ControlFileCharacters.UserIdentification:
-                        ret.UserName = param;
+                        jobInfo.UserName = param;
                         break;
                     case (char)ControlFileCharacters.JobName:
-                        ret.DocumentName = param;
+                        jobInfo.DocumentName = param;
                         break;
                     case (char)ControlFileCharacters.NameOfSourceFile:
-                        ret.DocumentName = param;
+                        jobInfo.DocumentName = param;
                         break;
                     case (char)ControlFileCharacters.PrintFileWithControlCharacters:
-                        ret.DataFilePath = dataFilePaths[param];
-                        ret.DataFileSize = dataFileSizes[param];
+                        jobInfo.DataFilePath = dataFilePaths[param];
+                        jobInfo.DataFileSize = dataFileSizes[param];
                         break;
                     case (char)ControlFileCharacters.UnlinkDataFile:
                         dataFilePaths.Remove(param);
@@ -71,7 +70,7 @@ namespace DistributePrintJobs
                 }
             }
 
-            return ret;
+            return jobInfo;
         }
 
         public delegate void NewJobEventHandler(object sender, JobInfo newJobInfo);
@@ -383,7 +382,7 @@ namespace DistributePrintJobs
 
         private static string GetJobDataFilename(ulong jobID, string lpdDataFilename)
         {
-            return string.Format("{0:04X}-{1}.dat", jobID, lpdDataFilename);
+            return string.Format("{0:X4}-{1}.dat", jobID, lpdDataFilename);
         }
 
         private void HandleConnection(NetworkStream stream)
@@ -578,7 +577,7 @@ namespace DistributePrintJobs
             // parse it, with all the magic
             try
             {
-                jobInfo = ParseJobInfo(controlString, jobFileReferences, jobFileLengths);
+                jobInfo = ParseJobInfo(jobInfo, controlString, jobFileReferences, jobFileLengths);
             }
             catch (FormatException)
             {
@@ -604,6 +603,7 @@ namespace DistributePrintJobs
                 {
                     try { HandleConnection(stream); }
                     catch (Exception e) { Console.Error.WriteLine(e.ToString()); }
+                    finally { stream.Close(); }
                 });
             }
         }

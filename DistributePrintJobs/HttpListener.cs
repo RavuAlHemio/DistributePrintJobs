@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using DotLiquid;
+using Newtonsoft.Json;
 
 namespace DistributePrintJobs
 {
@@ -13,6 +14,12 @@ namespace DistributePrintJobs
         private System.Net.HttpListener Listener { get; set; }
         private bool StopNow { get; set; }
         private Dictionary<string, Template> TemplateCache { get; set; }
+
+        private static Dictionary<string, string> ExtensionToMimeType = new Dictionary<string, string>()
+        {
+            { ".css", "text/css" },
+            { ".js", "text/javascript" }
+        };
 
         class JobInfoDrop : Drop
         {
@@ -29,7 +36,7 @@ namespace DistributePrintJobs
             public string HostName { get { return Info.HostName; } }
             public string UserName { get { return Info.UserName; } }
             public string DocumentName { get { return Info.DocumentName; } }
-            public string TargetPrinterId { get { return Info.TargetPrinterID.HasValue ? Info.TargetPrinterID.Value.ToString() : "-1"; } }
+            public string TargetPrinterShortName { get { return Info.TargetPrinterID.HasValue ? Management.Printers[Info.TargetPrinterID.Value].ShortName : "???"; } }
         }
 
         class PrinterInfoDrop : Drop
@@ -88,16 +95,41 @@ namespace DistributePrintJobs
             SendOk(response, "text/html; charset=utf-8", Encoding.UTF8.GetBytes(htmlText));
         }
 
+        private void SendOkJson(System.Net.HttpListenerResponse response)
+        {
+            SendOk(response, "application/json", Encoding.UTF8.GetBytes("{ \"status\": \"success\" }"));
+        }
+
         private void SendError(System.Net.HttpListenerResponse response, int code, string description, string body)
         {
             response.StatusCode = code;
             response.StatusDescription = description;
-            response.ContentType = "text/plain; charset=utf-8";
+            response.ContentType = "application/json";
 
-            var textBytes = Encoding.UTF8.GetBytes(body);
+            var retDict = new Dictionary<string, string>();
+            retDict["status"] = "error";
+            retDict["error"] = body;
+            var jsonString = JsonConvert.SerializeObject(retDict);
+
+            var textBytes = Encoding.UTF8.GetBytes(jsonString);
             response.ContentLength64 = textBytes.LongLength;
             response.OutputStream.Write(textBytes, 0, textBytes.Length);
             response.OutputStream.Close();
+        }
+
+        private void Send400MissingParameter(System.Net.HttpListenerResponse response)
+        {
+            SendError(response, 400, "Bad Request", "Missing parameter!");
+        }
+
+        private void Send400MalformedParameter(System.Net.HttpListenerResponse response)
+        {
+            SendError(response, 400, "Bad Request", "Malformed parameter!");
+        }
+
+        private void Send400ParameterResourceNonexistent(System.Net.HttpListenerResponse response)
+        {
+            SendError(response, 400, "Bad Request", "The requested resource does not exist!");
         }
 
         private void Send404(System.Net.HttpListenerResponse response)
@@ -132,9 +164,26 @@ namespace DistributePrintJobs
                     }
                     else
                     {
-                        using (var s = new FileStream(Path.Combine("Static", path), FileMode.Open))
+                        var mimeType = "application/octet-stream";
+                        if (path.Contains('.'))
                         {
-                            SendOk(context.Response, "application/octet-stream", BinaryStreamReader.ReadStreamToEnd(s));
+                            var ext = path.Substring(path.LastIndexOf('.'));
+                            if (ExtensionToMimeType.ContainsKey(ext))
+                            {
+                                mimeType = ExtensionToMimeType[ext];
+                            }
+                        }
+
+                        try
+                        {
+                            using (var s = new FileStream(Path.Combine("Static", path), FileMode.Open))
+                            {
+                                SendOk(context.Response, mimeType, BinaryStreamReader.ReadStreamToEnd(s));
+                            }
+                        }
+                        catch (FileNotFoundException)
+                        {
+                            Send404(context.Response);
                         }
                     }
                 }
@@ -156,34 +205,79 @@ namespace DistributePrintJobs
                     // split them up
                     var parameters = Util.DecodeUriParameters(parameterString);
 
-                    if (!parameters.ContainsKey("do"))
+                    if (!parameters.ContainsKey("do") || !parameters.ContainsKey("jobID"))
                     {
-                        Send404(context.Response);
+                        Send400MissingParameter(context.Response);
+                        return;
+                    }
+
+                    ulong jobID;
+                    if (!ulong.TryParse(parameters["jobID"], out jobID))
+                    {
+                        Send400MalformedParameter(context.Response);
+                        return;
+                    }
+
+                    var jobs = Management.Jobs;
+                    if (!jobs.ContainsKey(jobID))
+                    {
+                        Send400ParameterResourceNonexistent(context.Response);
                         return;
                     }
 
                     var doParam = parameters["do"];
                     if (doParam == "sendJobToPrinter")
                     {
-                        // TODO
+                        if (!parameters.ContainsKey("printerID"))
+                        {
+                            Send400MissingParameter(context.Response);
+                            return;
+                        }
+
+                        uint printerID;
+                        if (!uint.TryParse(parameters["printerID"], out printerID))
+                        {
+                            Send400MalformedParameter(context.Response);
+                            return;
+                        }
+
+                        var printers = Management.Printers;
+                        if (!printers.ContainsKey(printerID))
+                        {
+                            Send400ParameterResourceNonexistent(context.Response);
+                            return;
+                        }
+
+                        // send!!
+                        printers[printerID].Sender.Send(jobs[jobID]);
+                        jobs[jobID].Status = JobInfo.JobStatus.SentToPrinter;
+                        jobs[jobID].TargetPrinterID = printerID;
                     }
                     else if (doParam == "removeJob")
                     {
-                        // TODO
+                        // remove it
+                        Management.RemoveJob(jobID);
                     }
                     else if (doParam == "resetJob")
                     {
-                        // TODO
+                        if (Management.Jobs[jobID].Status == JobInfo.JobStatus.SentToPrinter)
+                        {
+                            Management.Jobs[jobID].Status = JobInfo.JobStatus.ReadyToPrint;
+                        }
                     }
                     else
                     {
                         Send404(context.Response);
+                        return;
                     }
+
+                    SendOkJson(context.Response);
                 }
             }
             else
             {
                 Send404(context.Response);
+                return;
             }
         }
     }
