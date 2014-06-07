@@ -9,7 +9,7 @@ namespace DistributePrintJobs
     /// <summary>
     /// A sender is responsible for sending print jobs to a printer.
     /// </summary>
-    interface ISender
+    public interface ISender
     {
         /// <summary>
         /// Send a job to the printer.

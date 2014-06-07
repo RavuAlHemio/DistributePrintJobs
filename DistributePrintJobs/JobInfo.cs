@@ -9,7 +9,7 @@ using Newtonsoft.Json;
 namespace DistributePrintJobs
 {
     [JsonObject(MemberSerialization.OptIn)]
-    class JobInfo
+    public class JobInfo
     {
         /// <summary>
         /// Possible print job statuses.

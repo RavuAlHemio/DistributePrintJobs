@@ -9,7 +9,7 @@ using Newtonsoft.Json;
 
 namespace DistributePrintJobs
 {
-    class HttpListener
+    public class HttpListener
     {
         private System.Net.HttpListener Listener { get; set; }
         private bool StopNow { get; set; }

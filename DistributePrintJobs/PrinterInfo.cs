@@ -6,7 +6,7 @@ using System.Threading;
 
 namespace DistributePrintJobs
 {
-    class PrinterInfo
+    public class PrinterInfo
     {
         private static uint NextPrinterID = 0;
         private static Object NextPrinterIDLock = new Object();

@@ -8,7 +8,7 @@ using Newtonsoft.Json;
 
 namespace DistributePrintJobs
 {
-    static class Config
+    public static class Config
     {
         public static int HttpListenPort { get; set; }
 

@@ -14,11 +14,11 @@ namespace DistributePrintJobs
     /// Listens to and processes incoming Line Printer Daemon requests.
     /// </summary>
     /// <remarks>See RFC1179 for a documentation of the protocol.</remarks>
-    class LpdListener
+    public class LpdListener
     {
         private TcpListener Listener;
 
-        public static JobInfo ParseJobInfo(JobInfo jobInfo, string jobInfoString, Dictionary<string, string> dataFilePaths, Dictionary<string, long> dataFileSizes)
+        protected static JobInfo ParseJobInfo(JobInfo jobInfo, string jobInfoString, Dictionary<string, string> dataFilePaths, Dictionary<string, long> dataFileSizes)
         {
             jobInfo.Status = JobInfo.JobStatus.ReadyToPrint;
             jobInfo.TimeOfArrival = DateTime.Now;
@@ -591,7 +591,7 @@ namespace DistributePrintJobs
             OnNewJobReceived(jobInfo);
         }
 
-        void ListenProc()
+        private void ListenProc()
         {
             Listener = new TcpListener(IPAddress.Any, 515);
             Listener.Start();
@@ -608,12 +608,12 @@ namespace DistributePrintJobs
             }
         }
 
-        internal void Start()
+        public void Start()
         {
             new Thread(new ThreadStart(ListenProc)).Start();
         }
 
-        internal void Stop()
+        public void Stop()
         {
             Listener.Stop();
         }

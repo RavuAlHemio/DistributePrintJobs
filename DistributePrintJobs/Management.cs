@@ -8,7 +8,7 @@ using Newtonsoft.Json;
 
 namespace DistributePrintJobs
 {
-    static class Management
+    public static class Management
     {
         private static Dictionary<ulong, JobInfo> JobDictionary = new Dictionary<ulong, JobInfo>();
         private static Dictionary<uint, PrinterInfo> PrinterDictionary = new Dictionary<uint, PrinterInfo>();
