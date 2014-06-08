@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Net;
+using log4net;
 
 namespace DistributePrintJobs
 {
@@ -58,6 +60,39 @@ namespace DistributePrintJobs
                 {
                     return totalReadBytes;
                 }
+            }
+        }
+
+        private static void EventLogEntryMapping(log4net.Appender.EventLogAppender appender, log4net.Core.Level log4netLevel, EventLogEntryType eventLogLevel)
+        {
+            var mapping = new log4net.Appender.EventLogAppender.Level2EventLogEntryType();
+            mapping.EventLogEntryType = eventLogLevel;
+            mapping.Level = log4netLevel;
+            appender.AddMapping(mapping);
+        }
+
+        public static void SetupLogging()
+        {
+            var confFile = new FileInfo("Logging.conf");
+            if (confFile.Exists)
+            {
+                log4net.Config.XmlConfigurator.Configure(confFile);
+            }
+            else
+            {
+                var rootLogger = ((log4net.Repository.Hierarchy.Hierarchy)log4net.LogManager.GetRepository()).Root;
+                rootLogger.Level = log4net.Core.Level.Debug;
+
+                // log WARN and above to NT Event Log
+                var eventLogAppender = new log4net.Appender.EventLogAppender();
+                eventLogAppender.ApplicationName = "DistributePrintJobs";
+                eventLogAppender.LogName = "Application";
+                EventLogEntryMapping(eventLogAppender, log4net.Core.Level.Debug, EventLogEntryType.Information);
+                EventLogEntryMapping(eventLogAppender, log4net.Core.Level.Info, EventLogEntryType.Information);
+                EventLogEntryMapping(eventLogAppender, log4net.Core.Level.Warn, EventLogEntryType.Warning);
+                EventLogEntryMapping(eventLogAppender, log4net.Core.Level.Error, EventLogEntryType.Error);
+                EventLogEntryMapping(eventLogAppender, log4net.Core.Level.Fatal, EventLogEntryType.Error);
+                rootLogger.AddAppender(eventLogAppender);
             }
         }
     }

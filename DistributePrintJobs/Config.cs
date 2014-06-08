@@ -2,17 +2,22 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using log4net;
 using Newtonsoft.Json;
 
 namespace DistributePrintJobs
 {
     public static class Config
     {
+        private static readonly ILog Logger = LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+
         public static int HttpListenPort { get; set; }
 
         public static void LoadConfig()
         {
             Dictionary<string, object> configDict;
+
+            Logger.Info("loading config");
 
             // set up defaults
             HttpListenPort = 8080;

@@ -4,12 +4,15 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using DotLiquid;
+using log4net;
 using Newtonsoft.Json;
 
 namespace DistributePrintJobs
 {
     public class HttpListener
     {
+        private static readonly ILog Logger = LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+
         private System.Net.HttpListener Listener { get; set; }
         private bool StopNow { get; set; }
         private Dictionary<string, Template> TemplateCache { get; set; }
@@ -67,6 +70,7 @@ namespace DistributePrintJobs
 
         public void Start()
         {
+            Logger.Debug("starting HttpListener");
             StopNow = false;
             Listener.Start();
             Listener.BeginGetContext(new AsyncCallback(ListenerCallback), Listener);
@@ -74,6 +78,7 @@ namespace DistributePrintJobs
 
         public void Stop()
         {
+            Logger.Debug("stopping HttpListener");
             StopNow = true;
             Listener.Stop();
         }
@@ -136,13 +141,9 @@ namespace DistributePrintJobs
             SendError(response, 404, "Not Found", "Not found!");
         }
 
-        private void ListenerCallback(IAsyncResult result)
+        private void HandleRequest(System.Net.HttpListenerContext context)
         {
-            // fetch the context
-            var context = Listener.EndGetContext(result);
-
-            // get ready for the next request
-            Listener.BeginGetContext(new AsyncCallback(ListenerCallback), Listener);
+            Logger.InfoFormat("{0} {1}", context.Request.HttpMethod, context.Request.Url.AbsolutePath);
 
             if (context.Request.HttpMethod == "GET")
             {
@@ -201,11 +202,14 @@ namespace DistributePrintJobs
                     // decode them
                     var parameterString = Encoding.Default.GetString(parameterBody);
 
+                    Logger.InfoFormat("dojob parameters: {0}", parameterString);
+
                     // split them up
                     var parameters = Util.DecodeUriParameters(parameterString);
 
                     if (!parameters.ContainsKey("do") || !parameters.ContainsKey("jobID"))
                     {
+                        Logger.Debug("dojob without 'do' or 'jobID' parameter");
                         Send400MissingParameter(context.Response);
                         return;
                     }
@@ -213,6 +217,7 @@ namespace DistributePrintJobs
                     ulong jobID;
                     if (!ulong.TryParse(parameters["jobID"], out jobID))
                     {
+                        Logger.Debug("dojob 'jobID' parameter unparseable");
                         Send400MalformedParameter(context.Response);
                         return;
                     }
@@ -220,6 +225,7 @@ namespace DistributePrintJobs
                     var jobs = Management.Jobs;
                     if (!jobs.ContainsKey(jobID))
                     {
+                        Logger.Debug("dojob with unknown jobID");
                         Send400ParameterResourceNonexistent(context.Response);
                         return;
                     }
@@ -229,6 +235,7 @@ namespace DistributePrintJobs
                     {
                         if (!parameters.ContainsKey("printerID"))
                         {
+                            Logger.Debug("sendJobToPrinter without 'printerID' parameter");
                             Send400MissingParameter(context.Response);
                             return;
                         }
@@ -236,6 +243,7 @@ namespace DistributePrintJobs
                         uint printerID;
                         if (!uint.TryParse(parameters["printerID"], out printerID))
                         {
+                            Logger.Debug("sendJobToPrinter 'printerID' parameter unparseable");
                             Send400MalformedParameter(context.Response);
                             return;
                         }
@@ -243,17 +251,21 @@ namespace DistributePrintJobs
                         var printers = Management.Printers;
                         if (!printers.ContainsKey(printerID))
                         {
+                            Logger.Debug("sendJobToPrinter with unknown printerID");
                             Send400ParameterResourceNonexistent(context.Response);
                             return;
                         }
 
                         // send!!
+                        Logger.DebugFormat("sendJobToPrinter: sending job {0} to printer {1}", jobID, printerID);
                         printers[printerID].Sender.Send(jobs[jobID]);
                         jobs[jobID].Status = JobInfo.JobStatus.SentToPrinter;
                         jobs[jobID].TargetPrinterID = printerID;
                     }
                     else if (doParam == "removeJob")
                     {
+                        Logger.DebugFormat("removeJob: removing job {0}", jobID);
+
                         // remove it
                         Management.RemoveJob(jobID);
                     }
@@ -261,11 +273,19 @@ namespace DistributePrintJobs
                     {
                         if (Management.Jobs[jobID].Status == JobInfo.JobStatus.SentToPrinter)
                         {
+                            Logger.DebugFormat("resetJob: resetting job {0}", jobID);
+
                             Management.Jobs[jobID].Status = JobInfo.JobStatus.ReadyToPrint;
+                        }
+                        else
+                        {
+                            Logger.DebugFormat("resetJob: not resetting job {0} (status {1})", jobID, Management.Jobs[jobID].Status);
                         }
                     }
                     else
                     {
+                        Logger.DebugFormat("dojob: unknown 'do' value '{0}'", doParam);
+
                         Send404(context.Response);
                         return;
                     }
@@ -277,6 +297,28 @@ namespace DistributePrintJobs
             {
                 Send404(context.Response);
                 return;
+            }
+        }
+
+        private void ListenerCallback(IAsyncResult result)
+        {
+            // fetch the context
+            var context = Listener.EndGetContext(result);
+
+            // get ready for the next request
+            Listener.BeginGetContext(new AsyncCallback(ListenerCallback), Listener);
+
+            try
+            {
+                HandleRequest(context);
+            }
+            catch (Exception exc)
+            {
+                Logger.Error("exception thrown while handling HTTP connection", exc);
+            }
+            finally
+            {
+                context.Response.Close();
             }
         }
     }

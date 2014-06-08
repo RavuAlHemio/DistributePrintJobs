@@ -18,6 +18,8 @@ namespace DistributePrintJobsCLI
         /// </summary>
         static void Main()
         {
+            Util.SetupLogging();
+
             StopSemaphore = new Semaphore(0, 1);
             Console.CancelKeyPress += Stop;
 

@@ -7,6 +7,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
+using log4net;
 
 namespace DistributePrintJobs
 {
@@ -16,62 +17,12 @@ namespace DistributePrintJobs
     /// <remarks>See RFC1179 for a documentation of the protocol.</remarks>
     public class LpdListener
     {
+        private static readonly ILog Logger = LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+        private static readonly Regex ControlFileNamePattern = new Regex("^cfA([0-9]{3})(.+)$");
+        private static readonly Regex DataFileNamePattern = new Regex("^dfA([0-9]{3})(.+)$");
+        private static readonly Regex WhiteSpacePattern = new Regex("[ \t\x0B\x0C]+");
+
         private TcpListener Listener;
-
-        protected static JobInfo ParseJobInfo(JobInfo jobInfo, string jobInfoString, Dictionary<string, string> dataFilePaths, Dictionary<string, long> dataFileSizes)
-        {
-            jobInfo.Status = JobInfo.JobStatus.ReadyToPrint;
-            jobInfo.TimeOfArrival = DateTime.Now;
-
-            foreach (var line in jobInfoString.Split('\n'))
-            {
-                if (line.Length < 2)
-                {
-                    continue;
-                }
-                
-                var letter = line[0];
-                var param = line.Substring(1);
-                switch (letter)
-                {
-                    case (char)ControlFileCharacters.HostName:
-                        jobInfo.HostName = param;
-                        break;
-                    case (char)ControlFileCharacters.UserIdentification:
-                        jobInfo.UserName = param;
-                        break;
-                    case (char)ControlFileCharacters.JobName:
-                        jobInfo.DocumentName = param;
-                        break;
-                    case (char)ControlFileCharacters.NameOfSourceFile:
-                        jobInfo.DocumentName = param;
-                        break;
-                    case (char)ControlFileCharacters.PrintFileWithControlCharacters:
-                        jobInfo.DataFilePath = dataFilePaths[param];
-                        jobInfo.DataFileSize = dataFileSizes[param];
-                        break;
-                    case (char)ControlFileCharacters.UnlinkDataFile:
-                        dataFilePaths.Remove(param);
-                        dataFileSizes.Remove(param);
-                        break;
-                    case (char)ControlFileCharacters.PlotCifFile:
-                    case (char)ControlFileCharacters.PrintDviFile:
-                    case (char)ControlFileCharacters.PrintFormattedFile:
-                    case (char)ControlFileCharacters.PlotBerkeleyFile:
-                    case (char)ControlFileCharacters.PrintDitroffOutput:
-                    case (char)ControlFileCharacters.PrintPostscript:
-                    case (char)ControlFileCharacters.PrintFortranCarriageControlFile:
-                    case (char)ControlFileCharacters.PrintTroffOutput:
-                    case (char)ControlFileCharacters.PrintRasterFile:
-                        throw new FormatException("cannot print this format");
-                    default:
-                        // ignore it...
-                        break;
-                }
-            }
-
-            return jobInfo;
-        }
 
         public delegate void NewJobEventHandler(object sender, JobInfo newJobInfo);
 
@@ -273,9 +224,62 @@ namespace DistributePrintJobs
             Palladium = 'z'
         }
 
-        private static readonly Regex ControlFileNamePattern = new Regex("^cfA([0-9]{3})(.+)$");
-        private static readonly Regex DataFileNamePattern = new Regex("^dfA([0-9]{3})(.+)$");
-        private static readonly Regex WhiteSpacePattern = new Regex("[ \t\x0B\x0C]+");
+        protected static JobInfo ParseJobInfo(JobInfo jobInfo, string jobInfoString, Dictionary<string, string> dataFilePaths, Dictionary<string, long> dataFileSizes)
+        {
+            jobInfo.Status = JobInfo.JobStatus.ReadyToPrint;
+            jobInfo.TimeOfArrival = DateTime.Now;
+
+            foreach (var line in jobInfoString.Split('\n'))
+            {
+                if (line.Length < 2)
+                {
+                    continue;
+                }
+
+                var letter = line[0];
+                var param = line.Substring(1);
+                switch (letter)
+                {
+                    case (char)ControlFileCharacters.HostName:
+                        jobInfo.HostName = param;
+                        break;
+                    case (char)ControlFileCharacters.UserIdentification:
+                        jobInfo.UserName = param;
+                        break;
+                    case (char)ControlFileCharacters.JobName:
+                        jobInfo.DocumentName = param;
+                        break;
+                    case (char)ControlFileCharacters.NameOfSourceFile:
+                        jobInfo.DocumentName = param;
+                        break;
+                    case (char)ControlFileCharacters.PrintFileWithControlCharacters:
+                        jobInfo.DataFilePath = dataFilePaths[param];
+                        jobInfo.DataFileSize = dataFileSizes[param];
+                        break;
+                    case (char)ControlFileCharacters.UnlinkDataFile:
+                        dataFilePaths.Remove(param);
+                        dataFileSizes.Remove(param);
+                        break;
+                    case (char)ControlFileCharacters.PlotCifFile:
+                    case (char)ControlFileCharacters.PrintDviFile:
+                    case (char)ControlFileCharacters.PrintFormattedFile:
+                    case (char)ControlFileCharacters.PlotBerkeleyFile:
+                    case (char)ControlFileCharacters.PrintDitroffOutput:
+                    case (char)ControlFileCharacters.PrintPostscript:
+                    case (char)ControlFileCharacters.PrintFortranCarriageControlFile:
+                    case (char)ControlFileCharacters.PrintTroffOutput:
+                    case (char)ControlFileCharacters.PrintRasterFile:
+                        Logger.WarnFormat("requested printing in unsupported format '{0}'", letter);
+                        throw new FormatException("cannot print this format");
+                    default:
+                        // ignore it...
+                        Logger.WarnFormat("ignoring unknown LPD command file command '{0}'", letter);
+                        break;
+                }
+            }
+
+            return jobInfo;
+        }
 
         protected virtual void OnNewJobReceived(JobInfo job)
         {
@@ -370,6 +374,11 @@ namespace DistributePrintJobs
             stream.WriteByte(0x02);
         }
 
+        private static void ReturnInternalIOError(NetworkStream stream)
+        {
+            stream.WriteByte(0x03);
+        }
+
         private static string GetSingleStringArgument(byte[] command)
         {
             var stringArgument = Encoding.Default.GetString(command, 1, command.Length - 1);
@@ -406,6 +415,8 @@ namespace DistributePrintJobs
                     {
                         var queueName = GetSingleStringArgument(command);
 
+                        Logger.DebugFormat("Received: print all waiting jobs on '{0}'", queueName);
+
                         // FIXME: check if this queue exists
 
                         // don't actually do anything :X
@@ -419,12 +430,11 @@ namespace DistributePrintJobs
                     {
                         var queueName = GetSingleStringArgument(command);
 
+                        Logger.DebugFormat("Received: print a job on '{0}'", queueName);
+
                         // FIXME: check if this queue exists
 
                         ReturnSuccess(stream);
-
-                        // switch to submission mode
-                        HandleJobSubmission(stream);
 
                         // nothing may follow
                         return;
@@ -462,7 +472,10 @@ namespace DistributePrintJobs
                     {
                         ReturnSuccess(stream);
 
-                        break;
+                        Logger.Debug("Received: abort current job");
+
+                        // nothing left to do here
+                        return;
                     }
 
                     case (byte)JobCommandCode.ReceiveControlFile:
@@ -471,6 +484,7 @@ namespace DistributePrintJobs
                         var controlFileData = WhiteSpacePattern.Split(controlFileDataString, 2);
                         if (controlFileData.Length != 2)
                         {
+                            Logger.WarnFormat("'receive control file' command '{0}' not in format 'length filename'", controlFileDataString);
                             ReturnInvalidSyntax(stream);
                             throw new InvalidDataException("invalid syntax");
                         }
@@ -478,11 +492,14 @@ namespace DistributePrintJobs
                         var length = int.Parse(controlFileData[0]);
                         controlFileName = controlFileData[1];
 
+                        Logger.DebugFormat("Received: receive {0} bytes of control file named {1}", length, controlFileName);
+
                         // parse the name
                         var controlFileNameMatch = ControlFileNamePattern.Match(controlFileName);
 
                         if (!controlFileNameMatch.Success)
                         {
+                            Logger.WarnFormat("'receive control file' filename '{0}' has invalid format", controlFileName);
                             ReturnInvalidSyntax(stream);
                             throw new InvalidDataException("control file name doesn't match expected pattern");
                         }
@@ -504,6 +521,7 @@ namespace DistributePrintJobs
                         }
                         else
                         {
+                            Logger.Warn("'receive control file' control file contents not succeeded by NUL");
                             ReturnInvalidSyntax(stream);
                             throw new InvalidDataException("control file not succeeded by NUL");
                         }
@@ -517,6 +535,7 @@ namespace DistributePrintJobs
                         var dataFileData = WhiteSpacePattern.Split(dataFileDataString, 2);
                         if (dataFileData.Length != 2)
                         {
+                            Logger.WarnFormat("'receive data file' command '{0}' not in format 'length filename'", dataFileDataString);
                             ReturnInvalidSyntax(stream);
                             throw new InvalidDataException("invalid syntax");
                         }
@@ -524,11 +543,14 @@ namespace DistributePrintJobs
                         var length = int.Parse(dataFileData[0]);
                         var lpdDataFileName = dataFileData[1];
 
+                        Logger.DebugFormat("Received: receive {0} bytes of data file named {1}", length, lpdDataFileName);
+
                         // parse the name
                         var dataFileNameMatch = DataFileNamePattern.Match(lpdDataFileName);
 
                         if (!dataFileNameMatch.Success)
                         {
+                            Logger.WarnFormat("'receive data file' filename '{0}' has invalid format", lpdDataFileName);
                             ReturnInvalidSyntax(stream);
                             throw new InvalidDataException("data file name doesn't match expected pattern");
                         }
@@ -540,7 +562,9 @@ namespace DistributePrintJobs
                         using (var outStream = new FileStream(outFileName, FileMode.CreateNew))
                         {
                             long? copyLength = (length == 0) ? (long?)null : (long?)length;
-                            long actualLength = Util.CopyStream(stream, outStream, copyLength);
+                            long actualLength;
+
+                            actualLength = Util.CopyStream(stream, outStream, copyLength);
 
                             jobFileReferences[lpdDataFileName] = outFileName;
                             jobFileLengths[lpdDataFileName] = actualLength;
@@ -562,6 +586,7 @@ namespace DistributePrintJobs
                             }
                             else
                             {
+                                Logger.Warn("'receive data file' data file contents not succeeded by NUL");
                                 ReturnInvalidSyntax(stream);
                                 throw new InvalidDataException("data file not succeeded by NUL");
                             }
@@ -582,9 +607,6 @@ namespace DistributePrintJobs
             catch (FormatException)
             {
                 ReturnUnsupportedPrintType(stream);
-
-                // FIXME: log this
-
                 return;
             }
 
@@ -601,20 +623,31 @@ namespace DistributePrintJobs
                 var stream = client.GetStream();
                 ThreadPool.QueueUserWorkItem((state) =>
                 {
-                    try { HandleConnection(stream); }
-                    catch (Exception e) { Console.Error.WriteLine(e.ToString()); }
-                    finally { stream.Close(); }
+                    try
+                    {
+                        HandleConnection(stream);
+                    }
+                    catch (Exception e)
+                    {
+                        Logger.Error("exception thrown while handling LPD request", e);
+                    }
+                    finally
+                    {
+                        stream.Close();
+                    }
                 });
             }
         }
 
         public void Start()
         {
+            Logger.Debug("starting LpdListener");
             new Thread(new ThreadStart(ListenProc)).Start();
         }
 
         public void Stop()
         {
+            Logger.Debug("stopping LpdListener");
             Listener.Stop();
         }
     }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net.Sockets;
 using System.Text;
+using log4net;
 
 namespace DistributePrintJobs
 {
@@ -12,6 +13,8 @@ namespace DistributePrintJobs
     /// <remarks>See RFC1179 for a documentation of the protocol.</remarks>
     class LpdSender : ISender
     {
+        private static readonly ILog Logger = LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+
         class BadResponseException : Exception
         {
             public string Stage { get; protected set; }
@@ -40,13 +43,19 @@ namespace DistributePrintJobs
             {
                 var thisJob = JobCounter;
                 ++JobCounter;
+                if (JobCounter > 999)
+                {
+                    JobCounter = 0;
+                }
                 return thisJob;
             }
         }
 
         public void Send(JobInfo job)
         {
-            // connect to server
+            Logger.InfoFormat("sending job {0} to {1}", job.JobID, Host);
+
+            Logger.DebugFormat("connecting to {0}", Host);
             var client = new TcpClient();
             client.Connect(Host, 515);
             var stream = client.GetStream();
@@ -57,8 +66,9 @@ namespace DistributePrintJobs
             int thisJobNumber = IncrementJobCounter();
             var dataFileName = string.Format("dfA{0:D3}{1}", thisJobNumber, job.HostName);
             var controlFileName = string.Format("cfA{0:D3}{1}", thisJobNumber, job.HostName);
+            Logger.DebugFormat("LpdSender job number is {0}; control file name is '{1}' and data file name is '{2}'", Host, controlFileName, dataFileName);
             
-            // initiate the print request
+            Logger.Debug("initiating the print request");
             message.Add(0x02);
             message.AddRange(Encoding.ASCII.GetBytes(QueueName));
             message.Add(0x0A);
@@ -69,10 +79,11 @@ namespace DistributePrintJobs
             b = stream.ReadByte();
             if (b != 0x00)
             {
+                Logger.WarnFormat("got 0x{0:X2} after initiating the print request", b);
                 throw new BadResponseException("creating a new print job", b);
             }
 
-            // prepare the control file
+            Logger.Debug("preparing the control file");
             var controlFile = new StringBuilder();
             controlFile.AppendFormat("H{0}\n", job.HostName);
             controlFile.AppendFormat("P{0}\n", job.UserName);
@@ -83,6 +94,7 @@ namespace DistributePrintJobs
             var controlFileBytes = Encoding.Default.GetBytes(controlFile.ToString());
 
             // send the control file metadata
+            Logger.Debug("sending the control file metadata");
             message.Add(0x02);
             message.AddRange(Encoding.ASCII.GetBytes(controlFileBytes.Length.ToString()));
             message.Add(0x20);
@@ -95,10 +107,11 @@ namespace DistributePrintJobs
             b = stream.ReadByte();
             if (b != 0x00)
             {
+                Logger.WarnFormat("got 0x{0:X2} after sending the control file metadata", b);
                 throw new BadResponseException("preparing to send control data", b);
             }
 
-            // send the control file
+            Logger.Debug("sending the control file data");
             stream.Write(controlFileBytes, 0, controlFileBytes.Length);
             stream.WriteByte(0x00);
 
@@ -106,10 +119,11 @@ namespace DistributePrintJobs
             b = stream.ReadByte();
             if (b != 0x00)
             {
+                Logger.WarnFormat("got 0x{0:X2} after sending the control file data", b);
                 throw new BadResponseException("sending control data", b);
             }
 
-            // send the data file metadata
+            Logger.Debug("sending the data file metadata");
             message.Add(0x03);
             message.AddRange(Encoding.ASCII.GetBytes(job.DataFileSize.ToString()));
             message.Add(0x20);
@@ -122,25 +136,27 @@ namespace DistributePrintJobs
             b = stream.ReadByte();
             if (b != 0x00)
             {
+                Logger.WarnFormat("got 0x{0:X2} after sending the data file metadata", b);
                 throw new BadResponseException("preparing to send data", b);
             }
 
+            Logger.Debug("sending the data file data");
             using (var inStream = new FileStream(job.DataFilePath, FileMode.Open))
             {
                 Util.CopyStream(inStream, stream, job.DataFileSize);
             }
-
-            // send the data
             stream.WriteByte(0x00);
 
             // read ACK
             b = stream.ReadByte();
             if (b != 0x00)
             {
+                Logger.WarnFormat("got 0x{0:X2} after sending the data file data", b);
                 throw new BadResponseException("sending data", b);
             }
 
             // close
+            Logger.Debug("job sent");
             client.Close();
         }
     }

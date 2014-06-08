@@ -2,12 +2,14 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using log4net;
 using Newtonsoft.Json;
 
 namespace DistributePrintJobs
 {
     public static class Management
     {
+        private static readonly ILog Logger = LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
         private static Dictionary<ulong, JobInfo> JobDictionary = new Dictionary<ulong, JobInfo>();
         private static Dictionary<uint, PrinterInfo> PrinterDictionary = new Dictionary<uint, PrinterInfo>();
         private static Object ManagementLock = new Object();
@@ -36,6 +38,7 @@ namespace DistributePrintJobs
 
         public static void AddPrinter(PrinterInfo info)
         {
+            Logger.DebugFormat("adding printer {0} ({1})", info.PrinterID, info.ShortName);
             lock (ManagementLock)
             {
                 PrinterDictionary[info.PrinterID] = info;
@@ -44,6 +47,7 @@ namespace DistributePrintJobs
 
         public static void RemovePrinter(uint printerID)
         {
+            Logger.DebugFormat("removing printer {0}", printerID);
             lock (ManagementLock)
             {
                 PrinterDictionary.Remove(printerID);
@@ -52,6 +56,7 @@ namespace DistributePrintJobs
 
         public static void AddJob(JobInfo info)
         {
+            Logger.DebugFormat("adding print job {0}", info.JobID);
             lock (ManagementLock)
             {
                 JobDictionary[info.JobID] = info;
@@ -64,6 +69,8 @@ namespace DistributePrintJobs
         {
             JobInfo job;
 
+            Logger.DebugFormat("removing print job {0}", jobID);
+
             // remove the job (under the lock)
             lock (ManagementLock)
             {
@@ -73,15 +80,16 @@ namespace DistributePrintJobs
                 WriteJobs();
             }
 
-            // delete the data file
             if (job.DataFilePath != null)
             {
+                Logger.DebugFormat("deleting print job data file {0}", job.DataFilePath);
                 File.Delete(job.DataFilePath);
             }
         }
 
         private static void WriteJobs()
         {
+            Logger.DebugFormat("writing out job list");
             using (var w = new StreamWriter(Path.Combine("Jobs", "Jobs.json"), false, Encoding.UTF8))
             {
                 w.Write(JsonConvert.SerializeObject(JobDictionary));
@@ -90,6 +98,7 @@ namespace DistributePrintJobs
 
         public static void ReadJobs()
         {
+            Logger.DebugFormat("reading in job list");
             try
             {
                 using (var r = new StreamReader(Path.Combine("Jobs", "Jobs.json"), Encoding.UTF8))
