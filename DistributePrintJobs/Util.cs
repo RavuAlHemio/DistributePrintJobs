@@ -7,7 +7,7 @@ using log4net;
 
 namespace DistributePrintJobs
 {
-    internal static class Util
+    public static class Util
     {
         public static Dictionary<string, string> DecodeUriParameters(string uriParameters)
         {
