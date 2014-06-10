@@ -1,0 +1,23 @@
+{
+    "HttpListenPort": 8080,
+    "Printers": [
+        {
+            "ShortName": "B&W",
+            "Connection": "LPD",
+            "Host": "printer1.example.com",
+            "Queue": "BW"
+        },
+        {
+            "ShortName": "Color",
+            "Connection": "LPD",
+            "Host": "printer1.example.com",
+            "Queue": "COLOR"
+        },
+        {
+            "ShortName": "Plotter",
+            "Connection": "LPD",
+            "Host": "plotter1.example.com",
+            "Queue": "QUEUE"
+        }
+    ]
+}
