@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net;
 using log4net;
 
@@ -11,7 +12,18 @@ namespace DistributePrintJobs
     {
         public static Dictionary<string, string> DecodeUriParameters(string uriParameters)
         {
+            var listRet = DecodeUriParametersAllowingDuplicates(uriParameters);
             var ret = new Dictionary<string, string>();
+            foreach (var pair in listRet)
+            {
+                ret[pair.Key] = pair.Value[0];
+            }
+            return ret;
+        }
+
+        public static Dictionary<string, List<string>> DecodeUriParametersAllowingDuplicates(string uriParameters)
+        {
+            var ret = new Dictionary<string, List<string>>();
 
             // key-value pairs are split using ampersands
             var keyValuePairs = uriParameters.Split('&');
@@ -28,7 +40,12 @@ namespace DistributePrintJobs
                 // decode key and value
                 var key = WebUtility.HtmlDecode(keyVal[0]);
                 var val = WebUtility.HtmlDecode(keyVal[1]);
-                ret[key] = val;
+
+                if (!ret.ContainsKey(key))
+                {
+                    ret[key] = new List<string>();
+                }
+                ret[key].Add(val);
             }
 
             return ret;

@@ -34,5 +34,61 @@ namespace DistributorTests
 
             CollectionAssert.AreEqual(inBytes, outStream.GetBuffer().Take(length).ToArray());
         }
+
+        [TestMethod]
+        public void TestNoQueryParameters()
+        {
+            var retDupes = Util.DecodeUriParametersAllowingDuplicates("");
+            Assert.AreEqual(0, retDupes.Count);
+
+            var retNoDupes = Util.DecodeUriParameters("");
+            Assert.AreEqual(0, retNoDupes.Count);
+        }
+
+        [TestMethod]
+        public void TestSingleQueryParameter()
+        {
+            var retDupes = Util.DecodeUriParametersAllowingDuplicates("one=two");
+            Assert.AreEqual(1, retDupes.Count);
+            CollectionAssert.Contains(retDupes.Keys, "one");
+            Assert.AreEqual(1, retDupes["one"].Count);
+            Assert.AreEqual("two", retDupes["one"][0]);
+
+            var retNoDupes = Util.DecodeUriParameters("one=two");
+            Assert.AreEqual(1, retNoDupes.Count);
+            CollectionAssert.Contains(retNoDupes.Keys, "one");
+            Assert.AreEqual("two", retNoDupes["one"]);
+        }
+
+        [TestMethod]
+        public void TestTwoEqualSignsInQueryParameter()
+        {
+            var retDupes = Util.DecodeUriParametersAllowingDuplicates("one=two=three");
+            Assert.AreEqual(1, retDupes.Count);
+            CollectionAssert.Contains(retDupes.Keys, "one");
+            Assert.AreEqual(1, retDupes["one"].Count);
+            Assert.AreEqual("two=three", retDupes["one"][0]);
+
+            var retNoDupes = Util.DecodeUriParameters("one=two=three");
+            Assert.AreEqual(1, retNoDupes.Count);
+            CollectionAssert.Contains(retNoDupes.Keys, "one");
+            Assert.AreEqual("two=three", retNoDupes["one"]);
+        }
+
+        [TestMethod]
+        public void TestDuplicateQueryParameter()
+        {
+            var retDupes = Util.DecodeUriParametersAllowingDuplicates("one=two&one=zero");
+            Assert.AreEqual(1, retDupes.Count);
+            CollectionAssert.Contains(retDupes.Keys, "one");
+            Assert.AreEqual(2, retDupes["one"].Count);
+            Assert.AreEqual("two", retDupes["one"][0]);
+            Assert.AreEqual("zero", retDupes["one"][1]);
+
+            var retNoDupes = Util.DecodeUriParameters("one=two&one=zero");
+            Assert.AreEqual(1, retNoDupes.Count);
+            CollectionAssert.Contains(retNoDupes.Keys, "one");
+            Assert.AreEqual("two", retNoDupes["one"]);
+        }
     }
 }
