@@ -4,6 +4,7 @@ using System.IO;
 using System.Text;
 using log4net;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace DistributePrintJobs
 {
@@ -15,7 +16,7 @@ namespace DistributePrintJobs
 
         public static void LoadConfig()
         {
-            Dictionary<string, object> configDict;
+            JObject jobject;
 
             Logger.Info("loading config");
 
@@ -24,27 +25,26 @@ namespace DistributePrintJobs
 
             using (var r = new StreamReader(new FileStream("Config.json", FileMode.Open), Encoding.UTF8))
             {
-                configDict = JsonConvert.DeserializeObject<Dictionary<string, object>>(r.ReadToEnd());
+                jobject = JObject.Parse(r.ReadToEnd());
             }
 
-            if (configDict.ContainsKey("HttpListenPort"))
+            if (jobject["HttpListenPort"] != null)
             {
-                HttpListenPort = (int)configDict["HttpListenPort"];
+                HttpListenPort = (int)jobject["HttpListenPort"];
             }
 
-            if (configDict.ContainsKey("Printers"))
+            if (jobject["Printers"] != null)
             {
-                var printers = configDict["Printers"] as List<Dictionary<string, object>>;
-                foreach (var printer in printers)
+                foreach (JObject printer in jobject["Printers"])
                 {
-                    var shortName = printer["ShortName"] as string;
-                    var connection = printer["Connection"] as string;
+                    var shortName = (string)printer["ShortName"];
+                    var connection = (string)printer["Connection"];
                     ISender sender;
                     if (connection == "LPD")
                     {
                         var lpdSender = new LpdSender();
-                        lpdSender.Host = printer["Host"] as string;
-                        lpdSender.QueueName = printer["Queue"] as string;
+                        lpdSender.Host = (string)printer["Host"];
+                        lpdSender.QueueName = (string)printer["Queue"];
                         sender = lpdSender;
                     }
                     else
