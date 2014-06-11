@@ -141,7 +141,7 @@ namespace DistributePrintJobs
             }
 
             Logger.Debug("sending the data file data");
-            using (var inStream = new FileStream(job.DataFilePath, FileMode.Open))
+            using (var inStream = new FileStream(job.DataFilePath, FileMode.Open, FileAccess.Read))
             {
                 Util.CopyStream(inStream, stream, job.DataFileSize);
             }

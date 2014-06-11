@@ -90,7 +90,7 @@ namespace DistributePrintJobs
         private static void WriteJobs()
         {
             Logger.DebugFormat("writing out job list");
-            using (var w = new StreamWriter(Path.Combine("Jobs", "Jobs.json"), false, Encoding.UTF8))
+            using (var w = new StreamWriter(Path.Combine(Util.ProgramDirectory, "Jobs", "Jobs.json"), false, Encoding.UTF8))
             {
                 w.Write(JsonConvert.SerializeObject(JobDictionary));
             }
@@ -101,7 +101,7 @@ namespace DistributePrintJobs
             Logger.DebugFormat("reading in job list");
             try
             {
-                using (var r = new StreamReader(Path.Combine("Jobs", "Jobs.json"), Encoding.UTF8))
+                using (var r = new StreamReader(Path.Combine(Util.ProgramDirectory, "Jobs", "Jobs.json"), Encoding.UTF8))
                 {
                     JobDictionary = JsonConvert.DeserializeObject<Dictionary<ulong, JobInfo>>(r.ReadToEnd());
                 }

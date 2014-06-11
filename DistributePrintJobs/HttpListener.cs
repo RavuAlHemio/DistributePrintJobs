@@ -59,10 +59,10 @@ namespace DistributePrintJobs
             Listener = new System.Net.HttpListener();
             Listener.Prefixes.Add("http://+:" + listenPort + "/");
 
-            Template.FileSystem = new DotLiquid.FileSystems.LocalFileSystem(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Templates"));
+            Template.FileSystem = new DotLiquid.FileSystems.LocalFileSystem(Path.Combine(Util.ProgramDirectory, "Templates"));
             
             TemplateCache = new Dictionary<string, Template>();
-            using (var r = new StreamReader(Path.Combine("Templates", "jobs.liquid")))
+            using (var r = new StreamReader(Path.Combine(Util.ProgramDirectory, "Templates", "jobs.liquid")))
             {
                 TemplateCache.Add("jobs", Template.Parse(r.ReadToEnd()));
             }
@@ -176,7 +176,7 @@ namespace DistributePrintJobs
 
                         try
                         {
-                            using (var s = new FileStream(Path.Combine("Static", path), FileMode.Open))
+                            using (var s = new FileStream(Path.Combine(Util.ProgramDirectory, "Static", path), FileMode.Open, FileAccess.Read))
                             {
                                 SendOk(context.Response, mimeType, BinaryStreamReader.ReadStreamToEnd(s));
                             }

@@ -23,7 +23,7 @@ namespace DistributePrintJobs
             // set up defaults
             HttpListenPort = 8080;
 
-            using (var r = new StreamReader(new FileStream("Config.json", FileMode.Open), Encoding.UTF8))
+            using (var r = new StreamReader(new FileStream(Path.Combine(Util.ProgramDirectory, "Config.json"), FileMode.Open, FileAccess.Read), Encoding.UTF8))
             {
                 jobject = JObject.Parse(r.ReadToEnd());
             }

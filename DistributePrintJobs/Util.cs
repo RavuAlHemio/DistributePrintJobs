@@ -112,5 +112,14 @@ namespace DistributePrintJobs
                 rootLogger.AddAppender(eventLogAppender);
             }
         }
+
+        public static string ProgramDirectory
+        {
+            get
+            {
+                var localPath = (new Uri(System.Reflection.Assembly.GetExecutingAssembly().CodeBase)).LocalPath;
+                return Path.GetDirectoryName(localPath);
+            }
+        }
     }
 }
