@@ -14,6 +14,8 @@ namespace DistributePrintJobs
 
         public static int HttpListenPort { get; set; }
 
+        public static string JobDirectory { get; set; }
+
         public static void LoadConfig()
         {
             JObject jobject;
@@ -22,6 +24,7 @@ namespace DistributePrintJobs
 
             // set up defaults
             HttpListenPort = 8080;
+            JobDirectory = Path.Combine(Util.ProgramDirectory, "Jobs");
 
             using (var r = new StreamReader(new FileStream(Path.Combine(Util.ProgramDirectory, "Config.json"), FileMode.Open, FileAccess.Read), Encoding.UTF8))
             {
@@ -31,6 +34,11 @@ namespace DistributePrintJobs
             if (jobject["HttpListenPort"] != null)
             {
                 HttpListenPort = (int)jobject["HttpListenPort"];
+            }
+
+            if (jobject["JobDirectory"] != null)
+            {
+                JobDirectory = (string)jobject["JobDirectory"];
             }
 
             if (jobject["Printers"] != null)

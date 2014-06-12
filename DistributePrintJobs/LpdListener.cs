@@ -561,7 +561,7 @@ namespace DistributePrintJobs
                         // must send this so that the client responds
                         ReturnSuccess(stream);
 
-                        var outFileName = Path.Combine(Util.ProgramDirectory, "Jobs", GetJobDataFilename(jobInfo.JobID, lpdDataFileName));
+                        var outFileName = Path.Combine(Config.JobDirectory, GetJobDataFilename(jobInfo.JobID, lpdDataFileName));
                         using (var outStream = new FileStream(outFileName, FileMode.CreateNew, FileAccess.Write))
                         {
                             long? copyLength = (length == 0) ? (long?)null : (long?)length;
