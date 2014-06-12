@@ -83,7 +83,7 @@ namespace DistributePrintJobs
             Listener.Prefixes.Add("http://+:" + listenPort + "/");
 
             Template.FileSystem = new DotLiquid.FileSystems.LocalFileSystem(Path.Combine(Util.ProgramDirectory, "Templates"));
-            
+
             TemplateCache = new Dictionary<string, Template>();
             using (var r = new StreamReader(Path.Combine(Util.ProgramDirectory, "Templates", "jobs.liquid")))
             {
@@ -204,7 +204,7 @@ namespace DistributePrintJobs
                     variables.Add("jobs", Management.Jobs.Values.OrderBy((k) => k.TimeOfArrival).Reverse().Select((j) => new JobInfoDrop(j)).ToArray());
                     variables.Add("printers", Management.Printers.Values.OrderBy((k) => k.PrinterID).Select((p) => new PrinterInfoDrop(p)).ToArray());
                     variables.Add("printer_statistics", PrinterStatsString);
-                    variables.Add("delete_times", new int[] {15, 30, 60, 120});
+                    variables.Add("delete_times", Config.DeletionAgeMinutesOptions);
                     var rendered = TemplateCache["jobs"].Render(variables);
                     SendOkHtml(context.Response, rendered);
                 }

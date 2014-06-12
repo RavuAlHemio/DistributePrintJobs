@@ -16,6 +16,8 @@ namespace DistributePrintJobs
 
         public static string JobDirectory { get; set; }
 
+        public static int[] DeletionAgeMinutesOptions { get; set; }
+
         public static void LoadConfig()
         {
             JObject jobject;
@@ -25,6 +27,7 @@ namespace DistributePrintJobs
             // set up defaults
             HttpListenPort = 8080;
             JobDirectory = Path.Combine(Util.ProgramDirectory, "Jobs");
+            DeletionAgeMinutesOptions = new int[] { 15, 30, 60, 120 };
 
             using (var r = new StreamReader(new FileStream(Path.Combine(Util.ProgramDirectory, "Config.json"), FileMode.Open, FileAccess.Read), Encoding.UTF8))
             {
@@ -39,6 +42,16 @@ namespace DistributePrintJobs
             if (jobject["JobDirectory"] != null)
             {
                 JobDirectory = (string)jobject["JobDirectory"];
+            }
+
+            if (jobject["DeletionAgeMinutesOptions"] != null)
+            {
+                var optList = new List<int>();
+                foreach (var opt in jobject["DeletionAgeMinutesOptions"])
+                {
+                    optList.Add((int)opt);
+                }
+                DeletionAgeMinutesOptions = optList.ToArray();
             }
 
             if (jobject["Printers"] != null)
