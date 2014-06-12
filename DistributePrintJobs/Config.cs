@@ -45,6 +45,10 @@ namespace DistributePrintJobs
             if (jobject["JobDirectory"] != null)
             {
                 JobDirectory = (string)jobject["JobDirectory"];
+                if (!Path.IsPathRooted(JobDirectory))
+                {
+                    Path.Combine(Util.ProgramDirectory, JobDirectory);
+                }
             }
 
             if (jobject["DeletionAgeMinutesOptions"] != null)
