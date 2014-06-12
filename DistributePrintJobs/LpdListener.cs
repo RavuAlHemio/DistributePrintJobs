@@ -436,6 +436,9 @@ namespace DistributePrintJobs
 
                         ReturnSuccess(stream);
 
+                        // switch to submission mode
+                        HandleJobSubmission(stream);
+
                         // nothing may follow
                         return;
                     }
