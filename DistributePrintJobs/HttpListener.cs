@@ -26,10 +26,32 @@ namespace DistributePrintJobs
         class JobInfoDrop : Drop
         {
             private readonly JobInfo Info;
+            private readonly string SizeString;
 
             public JobInfoDrop(JobInfo info)
             {
                 Info = info;
+
+                if (info.DataFileSize < 1024L)
+                {
+                    SizeString = info.DataFileSize + " B";
+                }
+                else if (info.DataFileSize < 1024L * 1024L)
+                {
+                    SizeString = (info.DataFileSize / 1024L) + " KB";
+                }
+                else if (info.DataFileSize < 1024L * 1024L * 1024L)
+                {
+                    SizeString = (info.DataFileSize / (1024L * 1024L)) + " MB";
+                }
+                else if (info.DataFileSize < 1024L * 1024L * 1024L * 1024L)
+                {
+                    SizeString = (info.DataFileSize / (1024L * 1024L * 1024L)) + " GB";
+                }
+                else
+                {
+                    SizeString = (info.DataFileSize / (1024L * 1024L * 1024L * 1024L)) + " TB";
+                }
             }
 
             public int StatusCode { get { return (int)Info.Status; } }
@@ -39,6 +61,7 @@ namespace DistributePrintJobs
             public string UserName { get { return Info.UserName; } }
             public string DocumentName { get { return Info.DocumentName; } }
             public string TargetPrinterShortName { get { return Info.TargetPrinterID.HasValue ? Management.Printers[Info.TargetPrinterID.Value].ShortName : "???"; } }
+            public string DataFileSize { get { return SizeString; } }
         }
 
         class PrinterInfoDrop : Drop

@@ -57,6 +57,7 @@
       <th>Datum/Uhrzeit</th>
       <th>User</th>
       <th>Dateiname</th>
+      <th>Gr&ouml;&szlig;e</th>
       <!-- <th>Rechner</th> -->
       <th colspan="2">Aktionen</th>
     </tr>
@@ -67,6 +68,7 @@
       <td class="arrivaltime">{{ job.time_of_arrival | escape }}</td>
       <td class="username">{{ job.user_name | escape }}</td>
       <td class="docname">{{ job.document_name | escape }}</td>
+      <td class="jobsize">{{ job.data_file_size | escape }}</td>
       <!-- <td class="hostname">{{ job.host_name | escape }}</td> -->
       <td class="jobstatus">
         {{ job.status_string }}

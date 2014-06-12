@@ -20,6 +20,11 @@ td.docname
 	max-width: 20em;
 }
 
+td.jobsize
+{
+	text-align: right;
+}
+
 tr:hover
 {
 	background-color: #eee;
