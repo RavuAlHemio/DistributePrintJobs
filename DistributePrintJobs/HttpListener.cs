@@ -164,6 +164,34 @@ namespace DistributePrintJobs
             SendError(response, 404, "Not Found", "Not found!");
         }
 
+        private string PrinterStatsString
+        {
+            get
+            {
+                var printerToJobCount = new Dictionary<uint, int>();
+                foreach (var job in Management.Jobs.Values)
+                {
+                    if (job.TargetPrinterID.HasValue)
+                    {
+                        if (!printerToJobCount.ContainsKey(job.TargetPrinterID.Value))
+                        {
+                            printerToJobCount[job.TargetPrinterID.Value] = 0;
+                        }
+                        ++(printerToJobCount[job.TargetPrinterID.Value]);
+                    }
+                }
+                var printers = Management.Printers;
+                var printerJobCountStrings = new List<string>();
+                foreach (var printerAndJobCount in printerToJobCount)
+                {
+                    var printerName = printers[printerAndJobCount.Key].ShortName;
+                    printerJobCountStrings.Add(string.Format("{0}: {1}", printerName, printerAndJobCount.Value));
+                }
+
+                return string.Join(" \u00B7 ", printerJobCountStrings);
+            }
+        }
+
         private void HandleRequest(System.Net.HttpListenerContext context)
         {
             Logger.InfoFormat("{0} {1}", context.Request.HttpMethod, context.Request.Url.AbsolutePath);
@@ -175,6 +203,8 @@ namespace DistributePrintJobs
                     var variables = new Hash();
                     variables.Add("jobs", Management.Jobs.Values.OrderBy((k) => k.TimeOfArrival).Reverse().Select((j) => new JobInfoDrop(j)).ToArray());
                     variables.Add("printers", Management.Printers.Values.OrderBy((k) => k.PrinterID).Select((p) => new PrinterInfoDrop(p)).ToArray());
+                    variables.Add("printer_statistics", PrinterStatsString);
+                    variables.Add("delete_times", new int[] {15, 30, 60, 120});
                     var rendered = TemplateCache["jobs"].Render(variables);
                     SendOkHtml(context.Response, rendered);
                 }
@@ -314,6 +344,55 @@ namespace DistributePrintJobs
                     }
 
                     SendOkJson(context.Response);
+                }
+                else if (context.Request.Url.AbsolutePath == "/deletesentjobs")
+                {
+                    var parameterBody = BinaryStreamReader.ReadStreamToEnd(context.Request.InputStream);
+                    var parameterString = Encoding.Default.GetString(parameterBody);
+                    Logger.InfoFormat("deletesentjobs parameters: {0}", parameterString);
+                    var parameters = Util.DecodeUriParameters(parameterString);
+
+                    if (!parameters.ContainsKey("minutes"))
+                    {
+                        Logger.Debug("deletesentjobs without 'minutes' parameter");
+                        Send400MissingParameter(context.Response);
+                        return;
+                    }
+
+                    uint minutes;
+                    if (!uint.TryParse(parameters["minutes"], out minutes))
+                    {
+                        Logger.Debug("deletesentjobs 'minutes' parameter unparseable");
+                        Send400MalformedParameter(context.Response);
+                        return;
+                    }
+
+                    Logger.DebugFormat("deletesentjobs: deleting jobs older than {0} minutes", minutes);
+
+                    // a'ight
+                    var jobs = Management.Jobs.Values;
+                    foreach (var job in jobs)
+                    {
+                        if (job.Status != JobInfo.JobStatus.SentToPrinter)
+                        {
+                            // not sent to printer
+                            continue;
+                        }
+                        if ((DateTime.Now - job.TimeOfArrival).TotalMinutes <= minutes)
+                        {
+                            // too young
+                            continue;
+                        }
+
+                        Management.RemoveJob(job.JobID);
+                    }
+
+                    SendOkJson(context.Response);
+                }
+                else
+                {
+                    Send404(context.Response);
+                    return;
                 }
             }
             else

@@ -12,7 +12,7 @@
         if (response.status == 'success') {
           window.location.reload();
         } else if (response.status == 'error') {
-
+          document.id('error').set('text', response.error);
         }
       }
     }).post({ 'do': 'sendJobToPrinter', 'jobID': jobID, 'printerID': printerID });
@@ -46,11 +46,33 @@
     }).post({ 'do': 'resetJob', 'jobID': jobID });
   }
 
+  function deleteSentJobsOlderThanMinutes(minutes)
+  {
+    var json = new Request.JSON({
+      url: '/deletesentjobs',
+      onSuccess: function (response) {
+        if (response.status == 'success') {
+          window.location.reload();
+        } else if (response.status == 'error') {
+          document.id('error').set('text', response.error);
+        }
+      }
+    }).post({ 'minutes': minutes });
+  }
+
   window.setTimeout('window.location.reload()', 5000);
 </script>
 {% endblock %}
 {% block content %}
 <p class="error"></p>
+<p class="stats">Zurzeit gesendet: {{ printer_statistics | escape }}</p>
+<p class="deleteline">
+  Druckaufträge löschen, die gesendet wurden und älter als
+  {% for delete_time in delete_times %}
+  <button class="deleteold" type="button" onclick="deleteSentJobsOlderThanMinutes({{ delete_time | escape }})">{{ delete_time | escape }}</button>
+  Minuten sind
+  {% endfor %}
+</p>
 <table>
   <thead>
     <tr>
