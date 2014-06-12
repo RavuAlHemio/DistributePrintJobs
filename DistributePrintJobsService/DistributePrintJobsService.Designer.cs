@@ -1,4 +1,7 @@
-﻿namespace DistributePrintJobsService
+﻿// Released into the public domain.
+// http://creativecommons.org/publicdomain/zero/1.0/
+
+namespace DistributePrintJobsService
 {
     partial class DistributePrintJobsService
     {
