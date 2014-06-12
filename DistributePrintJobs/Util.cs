@@ -90,7 +90,7 @@ namespace DistributePrintJobs
 
         public static void SetupLogging()
         {
-            var confFile = new FileInfo("Logging.conf");
+            var confFile = new FileInfo(Path.Combine(Util.ProgramDirectory, "Logging.conf"));
             if (confFile.Exists)
             {
                 log4net.Config.XmlConfigurator.Configure(confFile);
