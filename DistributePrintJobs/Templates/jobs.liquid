@@ -70,8 +70,8 @@
   Druckaufträge löschen, die gesendet wurden und älter als
   {% for delete_time in delete_times %}
   <button class="deleteold" type="button" onclick="deleteSentJobsOlderThanMinutes({{ delete_time | escape }})">{{ delete_time | escape }}</button>
-  Minuten sind
   {% endfor %}
+  Minuten sind
 </p>
 <table>
   <thead>
