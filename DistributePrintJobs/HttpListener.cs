@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using DotLiquid;
 using log4net;
 using Newtonsoft.Json;
@@ -313,10 +314,16 @@ namespace DistributePrintJobs
                         }
 
                         // send!!
-                        Logger.DebugFormat("sendJobToPrinter: sending job {0} to printer {1}", jobID, printerID);
-                        printers[printerID].Sender.Send(jobs[jobID]);
-                        jobs[jobID].Status = JobInfo.JobStatus.SentToPrinter;
-                        jobs[jobID].TargetPrinterID = printerID;
+                        Logger.DebugFormat("sendJobToPrinter: queuing job sending {0} to printer {1}", jobID, printerID);
+                        var thePrinter = printers[printerID];
+                        var theJob = jobs[jobID];
+                        ThreadPool.QueueUserWorkItem((state) =>
+                        {
+                            Logger.DebugFormat("sendJobToPrinter: sending job {0} to printer {1}", jobID, printerID);
+                            thePrinter.Sender.Send(theJob);
+                        });
+                        theJob.Status = JobInfo.JobStatus.SentToPrinter;
+                        theJob.TargetPrinterID = printerID;
                     }
                     else if (doParam == "removeJob")
                     {
