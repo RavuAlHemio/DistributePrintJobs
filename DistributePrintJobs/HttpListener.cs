@@ -59,7 +59,7 @@ namespace DistributePrintJobs
 
             public int StatusCode { get { return (int)Info.Status; } }
             public string JobId { get { return Info.JobID.ToString(); } }
-            public string TimeOfArrival { get { return Info.TimeOfArrival.ToString("dd. MM. yyyy HH:mm:ss"); } }
+            public string TimeOfArrival { get { return Info.TimeOfArrival.ToLocalTime().ToString("dd. MM. yyyy HH:mm:ss"); } }
             public string HostName { get { return Info.HostName; } }
             public string UserName { get { return Info.UserName; } }
             public string DocumentName { get { return Info.DocumentName; } }
@@ -381,7 +381,7 @@ namespace DistributePrintJobs
                             // not sent to printer
                             continue;
                         }
-                        if ((DateTime.Now - job.TimeOfArrival).TotalMinutes <= minutes)
+                        if ((DateTimeOffset.UtcNow - job.TimeOfArrival).TotalMinutes <= minutes)
                         {
                             // too young
                             continue;

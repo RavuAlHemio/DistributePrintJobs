@@ -74,7 +74,7 @@ namespace DistributePrintJobs
         /// The date/time when this print job arrived.
         /// </summary>
         [JsonProperty]
-        public DateTime TimeOfArrival { get; set; }
+        public DateTimeOffset TimeOfArrival { get; set; }
 
         /// <summary>
         /// The hostname of the computer which printed this document.

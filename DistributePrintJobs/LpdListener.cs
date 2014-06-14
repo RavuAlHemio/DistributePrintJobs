@@ -230,7 +230,7 @@ namespace DistributePrintJobs
         protected static JobInfo ParseJobInfo(JobInfo jobInfo, string jobInfoString, Dictionary<string, string> dataFilePaths, Dictionary<string, long> dataFileSizes)
         {
             jobInfo.Status = JobInfo.JobStatus.ReadyToPrint;
-            jobInfo.TimeOfArrival = DateTime.Now;
+            jobInfo.TimeOfArrival = DateTimeOffset.UtcNow;
 
             foreach (var line in jobInfoString.Split('\n'))
             {
