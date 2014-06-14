@@ -34,9 +34,11 @@ namespace DistributePrintJobs
         public LpdSender()
         {
             JobCounter = 0;
+            Port = 515;
         }
 
         public string Host { get; set; }
+        public int Port { get; set; }
         public string QueueName { get; set; }
         private int JobCounter { get; set; }
 
@@ -60,7 +62,7 @@ namespace DistributePrintJobs
 
             Logger.DebugFormat("connecting to {0}", Host);
             var client = new TcpClient();
-            client.Connect(Host, 515);
+            client.Connect(Host, Port);
             var stream = client.GetStream();
 
             var message = new List<byte>();
@@ -70,7 +72,7 @@ namespace DistributePrintJobs
             var dataFileName = string.Format("dfA{0:D3}{1}", thisJobNumber, job.HostName);
             var controlFileName = string.Format("cfA{0:D3}{1}", thisJobNumber, job.HostName);
             Logger.DebugFormat("LpdSender job number is {0}; control file name is '{1}' and data file name is '{2}'", Host, controlFileName, dataFileName);
-            
+
             Logger.Debug("initiating the print request");
             message.Add(0x02);
             message.AddRange(Encoding.ASCII.GetBytes(QueueName));

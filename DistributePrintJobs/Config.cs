@@ -17,6 +17,8 @@ namespace DistributePrintJobs
 
         public static int HttpListenPort { get; set; }
 
+        public static int LpdListenPort { get; set; }
+
         public static string JobDirectory { get; set; }
 
         public static int[] DeletionAgeMinutesOptions { get; set; }
@@ -29,6 +31,7 @@ namespace DistributePrintJobs
 
             // set up defaults
             HttpListenPort = 8080;
+            LpdListenPort = 515;
             JobDirectory = Path.Combine(Util.ProgramDirectory, "Jobs");
             DeletionAgeMinutesOptions = new int[] { 15, 30, 60, 120 };
 
@@ -40,6 +43,11 @@ namespace DistributePrintJobs
             if (jobject["HttpListenPort"] != null)
             {
                 HttpListenPort = (int)jobject["HttpListenPort"];
+            }
+
+            if (jobject["LpdListenPort"] != null)
+            {
+                LpdListenPort = (int)jobject["LpdListenPort"];
             }
 
             if (jobject["JobDirectory"] != null)
@@ -73,6 +81,10 @@ namespace DistributePrintJobs
                         var lpdSender = new LpdSender();
                         lpdSender.Host = (string)printer["Host"];
                         lpdSender.QueueName = (string)printer["Queue"];
+                        if (printer["Port"] != null)
+                        {
+                            lpdSender.Port = (int)printer["Port"];
+                        }
                         sender = lpdSender;
                     }
                     else

@@ -1,5 +1,6 @@
 {
     "HttpListenPort": 8080,
+    "LpdListenPort": 515,
     "Printers": [
         {
             "ShortName": "B&W",

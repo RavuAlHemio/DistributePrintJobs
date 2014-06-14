@@ -621,7 +621,7 @@ namespace DistributePrintJobs
 
         private void ListenProc()
         {
-            Listener = new TcpListener(IPAddress.Any, 515);
+            Listener = new TcpListener(IPAddress.Any, Config.LpdListenPort);
             Listener.Start();
             for (; ; )
             {
