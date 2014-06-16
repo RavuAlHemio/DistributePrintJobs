@@ -14,7 +14,7 @@ namespace DistributePrintJobs
     /// Sends print requests via the Line Printer Daemon protocol.
     /// </summary>
     /// <remarks>See RFC1179 for a documentation of the protocol.</remarks>
-    class LpdSender : ISender
+    public class LpdSender : ISender
     {
         private static readonly ILog Logger = LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
