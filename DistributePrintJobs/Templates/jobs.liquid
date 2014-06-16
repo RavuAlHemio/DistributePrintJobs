@@ -89,7 +89,7 @@
     <tr>
       <td class="arrivaltime">{{ job.time_of_arrival | escape }}</td>
       <td class="username">{{ job.user_name | escape }}</td>
-      <td class="docname">{{ job.document_name | escape }}</td>
+      <td class="docname">{{ job.document_name | escape | filename_break_opportunities }}</td>
       <td class="jobsize">{{ job.data_file_size | escape }}</td>
       <!-- <td class="hostname">{{ job.host_name | escape }}</td> -->
       <td class="jobstatus">

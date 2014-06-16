@@ -82,12 +82,31 @@ namespace DistributePrintJobs
             public string ShortName { get { return Info.ShortName; } }
         }
 
+        static class AdditionalFilters
+        {
+            public static string FilenameBreakOpportunities(string what)
+            {
+                // break file names on hyphens, underscores, slashes, backslashes and dots
+                var ret = new StringBuilder();
+                foreach (char c in what)
+                {
+                    if ("-_/\\.".IndexOf(c) != -1)
+                    {
+                        ret.Append("<wbr/>");
+                    }
+                    ret.Append(c);
+                }
+                return ret.ToString();
+            }
+        }
+
         public HttpListener(int listenPort)
         {
             Listener = new System.Net.HttpListener();
             Listener.Prefixes.Add("http://+:" + listenPort + "/");
 
             Template.FileSystem = new DotLiquid.FileSystems.LocalFileSystem(Path.Combine(Util.ProgramDirectory, "Templates"));
+            Template.RegisterFilter(typeof(AdditionalFilters));
 
             TemplateCache = new Dictionary<string, Template>();
             using (var r = new StreamReader(Path.Combine(Util.ProgramDirectory, "Templates", "jobs.liquid")))
