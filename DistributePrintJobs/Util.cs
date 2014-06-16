@@ -13,6 +13,11 @@ namespace DistributePrintJobs
 {
     public static class Util
     {
+        public static bool IsResettable(this JobInfo.JobStatus status)
+        {
+            return (status != JobInfo.JobStatus.Unknown && status != JobInfo.JobStatus.ReadyToPrint);
+        }
+
         public static Dictionary<string, string> DecodeUriParameters(string uriParameters)
         {
             var listRet = DecodeUriParametersAllowingDuplicates(uriParameters);

@@ -66,6 +66,7 @@ namespace DistributePrintJobs
             public string DocumentName { get { return Info.DocumentName; } }
             public string TargetPrinterShortName { get { return Info.TargetPrinterID.HasValue ? Management.Printers[Info.TargetPrinterID.Value].ShortName : "???"; } }
             public string DataFileSize { get { return SizeString; } }
+            public bool IsStatusResettable { get { return Info.Status.IsResettable(); } }
         }
 
         class PrinterInfoDrop : Drop
@@ -317,13 +318,23 @@ namespace DistributePrintJobs
                         Logger.DebugFormat("sendJobToPrinter: queuing job sending {0} to printer {1}", jobID, printerID);
                         var thePrinter = printers[printerID];
                         var theJob = jobs[jobID];
+                        theJob.Status = JobInfo.JobStatus.QueuedForSend;
+                        theJob.TargetPrinterID = printerID;
                         ThreadPool.QueueUserWorkItem((state) =>
                         {
                             Logger.DebugFormat("sendJobToPrinter: sending job {0} to printer {1}", jobID, printerID);
-                            thePrinter.Sender.Send(theJob);
+                            theJob.Status = JobInfo.JobStatus.SendingToPrinter;
+                            try
+                            {
+                                thePrinter.Sender.Send(theJob);
+                                theJob.Status = JobInfo.JobStatus.SentToPrinter;
+                            }
+                            catch (Exception exc)
+                            {
+                                theJob.Status = JobInfo.JobStatus.SendingFailed;
+                                Logger.ErrorFormat("error sending job {0} to printer {1}: {2}", jobID, printerID, exc.ToString());
+                            }
                         });
-                        theJob.Status = JobInfo.JobStatus.SentToPrinter;
-                        theJob.TargetPrinterID = printerID;
                     }
                     else if (doParam == "removeJob")
                     {
@@ -334,7 +345,7 @@ namespace DistributePrintJobs
                     }
                     else if (doParam == "resetJob")
                     {
-                        if (Management.Jobs[jobID].Status == JobInfo.JobStatus.SentToPrinter)
+                        if (Management.Jobs[jobID].Status.IsResettable())
                         {
                             Logger.DebugFormat("resetJob: resetting job {0}", jobID);
 

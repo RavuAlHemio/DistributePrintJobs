@@ -28,7 +28,24 @@ namespace DistributePrintJobs
             /// <summary>
             /// The job has been sent to the printer.
             /// </summary>
-            SentToPrinter = 2
+            SentToPrinter = 2,
+
+            /// <summary>
+            /// The job is queued (in a thread pool) to be sent to the printer.
+            /// </summary>
+            QueuedForSend = 3,
+
+            /// <summary>
+            /// The job is currently being sent to the printer.
+            /// </summary>
+            SendingToPrinter = 4,
+
+            /// <summary>
+            /// The job could not be successfully sent to the printer.
+            /// </summary>
+            SendingFailed = 5
+
+            // extension methods: see Util
         }
 
         private static ulong NextJobID = 0;

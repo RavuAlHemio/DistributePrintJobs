@@ -100,9 +100,17 @@
           {% endfor %}
         {% elsif job.status_code == 2 %}
         gesendet an <em>{{ job.target_printer_short_name | escape }}</em>
-        <button class="resetjob" type="button" onclick="resetJob({{ job.job_id }})">&#10227;</button>
+        {% elsif job.status_code == 3 %}
+        wird gleich an <em>{{ job.target_printer_short_name | escape }}</em> gesendet
+        {% elsif job.status_code == 4 %}
+        wird gerade an <em>{{ job.target_printer_short_name | escape }}</em> gesendet
+        {% elsif job.status_code == 5 %}
+        Senden an <em>{{ job.target_printer_short_name | escape }}</em> schlug fehl
         {% else %}
         ???
+        {% endif %}
+        {% if job.is_status_resettable %}
+        <button class="resetjob" type="button" onclick="resetJob({{ job.job_id }})">&#10227;</button>
         {% endif %}
       </td>
       <td>
