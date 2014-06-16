@@ -18,6 +18,7 @@ td, th
 td.docname
 {
 	max-width: 20em;
+	word-break: break-all;
 }
 
 td.jobsize
