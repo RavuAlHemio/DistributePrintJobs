@@ -75,6 +75,13 @@ namespace DistributePrintJobs
                 {
                     var shortName = (string)printer["ShortName"];
                     var connection = (string)printer["Connection"];
+
+                    uint distributionFactor = 1;
+                    if (printer["DistributionFactor"] != null)
+                    {
+                        distributionFactor = (uint)printer["DistributionFactor"];
+                    }
+
                     ISender sender;
                     if (connection == "LPD")
                     {
@@ -93,6 +100,7 @@ namespace DistributePrintJobs
                     }
 
                     var printerInfo = new PrinterInfo();
+                    printerInfo.DistributionFactor = distributionFactor;
                     printerInfo.ShortName = shortName;
                     printerInfo.Sender = sender;
                     Management.AddPrinter(printerInfo);

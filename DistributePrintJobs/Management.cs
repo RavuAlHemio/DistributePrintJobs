@@ -109,6 +109,10 @@ namespace DistributePrintJobs
                     JobDictionary = JsonConvert.DeserializeObject<Dictionary<ulong, JobInfo>>(r.ReadToEnd());
                 }
             }
+            catch (DirectoryNotFoundException)
+            {
+                // never mind
+            }
             catch (FileNotFoundException)
             {
                 // never mind

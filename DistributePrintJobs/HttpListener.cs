@@ -67,6 +67,7 @@ namespace DistributePrintJobs
             public string TargetPrinterShortName { get { return Info.TargetPrinterID.HasValue ? Management.Printers[Info.TargetPrinterID.Value].ShortName : "???"; } }
             public string DataFileSize { get { return SizeString; } }
             public bool IsStatusResettable { get { return Info.Status.IsResettable(); } }
+            public bool IsStatusSendable { get { return Info.Status.IsSendable(); } }
         }
 
         class PrinterInfoDrop : Drop
@@ -216,6 +217,30 @@ namespace DistributePrintJobs
             }
         }
 
+        private void QueueSendJobToPrinter(ulong jobID, uint printerID)
+        {
+            var thePrinter = Management.Printers[printerID];
+            var theJob = Management.Jobs[jobID];
+            theJob.Status = JobInfo.JobStatus.QueuedForSend;
+            theJob.TargetPrinterID = printerID;
+            ThreadPool.QueueUserWorkItem((state) =>
+            {
+                Logger.DebugFormat("sending job {0} to printer {1}", jobID, printerID);
+                theJob.Status = JobInfo.JobStatus.SendingToPrinter;
+                try
+                {
+                    thePrinter.Sender.Send(theJob);
+                    theJob.Status = JobInfo.JobStatus.SentToPrinter;
+                    thePrinter.IncrementJobCount();
+                }
+                catch (Exception exc)
+                {
+                    theJob.Status = JobInfo.JobStatus.SendingFailed;
+                    Logger.ErrorFormat("error sending job {0} to printer {1}: {2}", jobID, printerID, exc.ToString());
+                }
+            });
+        }
+
         private void HandleRequest(System.Net.HttpListenerContext context)
         {
             Logger.InfoFormat("{0} {1}", context.Request.HttpMethod, context.Request.Url.AbsolutePath);
@@ -335,25 +360,7 @@ namespace DistributePrintJobs
 
                         // send!!
                         Logger.DebugFormat("sendJobToPrinter: queuing job sending {0} to printer {1}", jobID, printerID);
-                        var thePrinter = printers[printerID];
-                        var theJob = jobs[jobID];
-                        theJob.Status = JobInfo.JobStatus.QueuedForSend;
-                        theJob.TargetPrinterID = printerID;
-                        ThreadPool.QueueUserWorkItem((state) =>
-                        {
-                            Logger.DebugFormat("sendJobToPrinter: sending job {0} to printer {1}", jobID, printerID);
-                            theJob.Status = JobInfo.JobStatus.SendingToPrinter;
-                            try
-                            {
-                                thePrinter.Sender.Send(theJob);
-                                theJob.Status = JobInfo.JobStatus.SentToPrinter;
-                            }
-                            catch (Exception exc)
-                            {
-                                theJob.Status = JobInfo.JobStatus.SendingFailed;
-                                Logger.ErrorFormat("error sending job {0} to printer {1}: {2}", jobID, printerID, exc.ToString());
-                            }
-                        });
+                        QueueSendJobToPrinter(jobID, printerID);
                     }
                     else if (doParam == "removeJob")
                     {
@@ -425,6 +432,81 @@ namespace DistributePrintJobs
                         }
 
                         Management.RemoveJob(job.JobID);
+                    }
+
+                    SendOkJson(context.Response);
+                }
+                else if (context.Request.Url.AbsolutePath == "/autobalancemultiple")
+                {
+                    var parameterBody = BinaryStreamReader.ReadStreamToEnd(context.Request.InputStream);
+                    var parameterString = Encoding.Default.GetString(parameterBody);
+                    Logger.InfoFormat("autobalancemultiple parameters: {0}", parameterString);
+                    var parameters = Util.DecodeUriParameters(parameterString);
+
+                    if (!parameters.ContainsKey("jobIDs"))
+                    {
+                        Logger.Debug("autobalancemultiple without 'jobIDs' parameter");
+                        Send400MissingParameter(context.Response);
+                        return;
+                    }
+
+                    // fetch the job IDs
+                    var jobIDs = new List<ulong>();
+                    foreach (var jobIDString in parameters["jobIDs"].Split(','))
+                    {
+                        ulong jobID;
+                        if (!ulong.TryParse(jobIDString, out jobID))
+                        {
+                            Logger.DebugFormat("autobalancemultiple invalid job ID '{0}'", jobIDString);
+                            Send400MalformedParameter(context.Response);
+                            return;
+                        }
+                        if (!Management.Jobs.ContainsKey(jobID))
+                        {
+                            Logger.DebugFormat("autobalancemultiple job ID {0} does not exist", jobID);
+                            Send400ParameterResourceNonexistent(context.Response);
+                            return;
+                        }
+                        jobIDs.Add(jobID);
+                    }
+
+                    // calculate the usage factors for each printer
+                    var printerIDsToUsageFactors = new Dictionary<uint, double>();
+                    foreach (var printer in Management.Printers)
+                    {
+                        // long-term memory
+                        //printerIDsToUsageFactors[printer.Key] = ((double)printer.Value.JobCount) / ((double)printer.Value.DistributionFactor);
+
+                        // short-term memory
+                        printerIDsToUsageFactors[printer.Key] = 0.0;
+                    }
+
+                    if (printerIDsToUsageFactors.Count == 0)
+                    {
+                        // well, not much to do here
+                        return;
+                    }
+
+                    // for each job
+                    foreach (var jobID in jobIDs)
+                    {
+                        // find the printer with the lowest usage factor
+                        uint? leastUsedPrinterID = null;
+                        double lowestUsageFactor = double.PositiveInfinity;
+                        foreach (var printerUsage in printerIDsToUsageFactors)
+                        {
+                            if (lowestUsageFactor > printerUsage.Value)
+                            {
+                                lowestUsageFactor = printerUsage.Value;
+                                leastUsedPrinterID = printerUsage.Key;
+                            }
+                        }
+
+                        // send that job to that printer
+                        QueueSendJobToPrinter(jobID, leastUsedPrinterID.Value);
+
+                        // add it to the usage factor for next round
+                        printerIDsToUsageFactors[leastUsedPrinterID.Value] += 1.0 / ((double)Management.Printers[leastUsedPrinterID.Value].DistributionFactor);
                     }
 
                     SendOkJson(context.Response);

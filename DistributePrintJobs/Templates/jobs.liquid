@@ -6,7 +6,7 @@
 <script type="text/javascript">
   function sendJobToPrinter(jobID, printerID)
   {
-    var json = new Request.JSON({
+    new Request.JSON({
       url: '/dojob',
       onSuccess: function (response) {
         if (response.status == 'success') {
@@ -20,7 +20,7 @@
 
   function removeJob(jobID)
   {
-    var json = new Request.JSON({
+    new Request.JSON({
       url: '/dojob',
       onSuccess: function (response) {
         if (response.status == 'success') {
@@ -34,7 +34,7 @@
 
   function resetJob(jobID)
   {
-    var json = new Request.JSON({
+    new Request.JSON({
       url: '/dojob',
       onSuccess: function (response) {
         if (response.status == 'success') {
@@ -48,7 +48,7 @@
 
   function deleteSentJobsOlderThanMinutes(minutes)
   {
-    var json = new Request.JSON({
+    new Request.JSON({
       url: '/deletesentjobs',
       onSuccess: function (response) {
         if (response.status == 'success') {
@@ -60,18 +60,77 @@
     }).post({ 'minutes': minutes });
   }
 
-  window.setTimeout('window.location.reload()', 5000);
+  function autobalanceDistribute()
+  {
+    var jobsToSubmit = [];
+    $$('.autobalancecheckbox').each(function (cbox) {
+      if (cbox.get('checked')) {
+        jobsToSubmit.push(cbox.get('value'));
+      }
+    });
+    if (jobsToSubmit.length == 0)
+    {
+      return;
+    }
+    var jobString = jobsToSubmit.join(',');
+
+    new Request.JSON({
+      url: '/autobalancemultiple',
+      onSuccess: function (response) {
+        if (response.status == 'success') {
+          window.location.reload();
+        } else if (response.status == 'error') {
+          document.id('error').set('text', response.error);
+        }
+      }
+    }).post({ 'jobIDs': jobString });
+  }
+
+  function disableAutoRefresh()
+  {
+    document.id('autorefreshcheckbox').set('checked', false);
+  }
+
+  function maybeRefresh()
+  {
+    if (document.id('autorefreshcheckbox').get('checked'))
+    {
+      window.location.reload();
+    }
+    else
+    {
+      window.setTimeout('maybeRefresh()', 5000);
+    }
+  }
+
+  window.addEvent('domready', function() {
+    document.id('autorefreshcheckbox').set('checked', true);
+    $$('.autobalancecheckbox').each(function (cb) {
+      cb.set('checked', false);
+    });
+    window.setTimeout('maybeRefresh()', 5000);
+  });
 </script>
 {% endblock %}
 {% block content %}
 <p class="error"></p>
-<p class="stats">Zurzeit gesendet: {{ printer_statistics | escape }}</p>
-<p class="deleteline">
-  Druckaufträge löschen, die gesendet wurden und älter als
-  {% for delete_time in delete_times %}
-  <button class="deleteold" type="button" onclick="deleteSentJobsOlderThanMinutes({{ delete_time | escape }})">{{ delete_time | escape }}</button>
-  {% endfor %}
-  Minuten sind
+<p class="topinfo">
+  <span class="stats">
+    Zurzeit gesendet: {{ printer_statistics | escape }}
+  </span>
+  &#10033;<wbr/>
+  <span class="deleteline">
+    Druckaufträge löschen, die gesendet wurden und älter als
+    {% for delete_time in delete_times %}
+    <button class="deleteold" type="button" onclick="deleteSentJobsOlderThanMinutes({{ delete_time | escape }})">{{ delete_time | escape }}</button>
+    {% endfor %}
+    Minuten sind
+  </span>
+  &#10033;<wbr/>
+  <span class="autorefreshsettings">
+    <input type="checkbox" id="autorefreshcheckbox" checked="checked" />
+    <label for="autorefreshcheckbox">Seite automatisch neu laden</label>
+  </span>
 </p>
 <table>
   <thead>
@@ -79,9 +138,11 @@
       <th>Datum/Uhrzeit</th>
       <th>User</th>
       <th>Dateiname</th>
+      <!-- <th>Name der Datendatei</th> -->
       <th>Gr&ouml;&szlig;e</th>
       <!-- <th>Rechner</th> -->
       <th colspan="2">Aktionen</th>
+      <th>automatische<wbr/> Verteilung</th>
     </tr>
   </thead>
   <tbody>
@@ -90,6 +151,7 @@
       <td class="arrivaltime">{{ job.time_of_arrival | escape }}</td>
       <td class="username">{{ job.user_name | escape }}</td>
       <td class="docname">{{ job.document_name | escape | filename_break_opportunities }}</td>
+      <!-- <td class="datafilename">{{ job.data_file_name | escape }}</td> -->
       <td class="jobsize">{{ job.data_file_size | escape }}</td>
       <!-- <td class="hostname">{{ job.host_name | escape }}</td> -->
       <td class="jobstatus">
@@ -113,11 +175,25 @@
         <button class="resetjob" type="button" onclick="resetJob({{ job.job_id }})">&#10227;</button>
         {% endif %}
       </td>
-      <td>
+      <td class="removejob">
         <button class="remove" type="button" onclick="removeJob({{ job.job_id }})">&#10006;</button>
+      </td>
+      <td class="autobalancejob">
+        <input type="checkbox" id="autobalancejob{{ job.job_id }}" class="autobalancecheckbox" value="{{ job.job_id }}" onclick="disableAutoRefresh()" />
       </td>
     </tr>
     {% endfor %}
+    <tr>
+      <td></td>
+      <td></td>
+      <td></td>
+      <!-- <td></td> -->
+      <td></td>
+      <!-- <td></td> -->
+      <td></td>
+      <td></td>
+      <td><button class="autobalance" type="button" onclick="autobalanceDistribute()">verteilen</button></td>
+    </tr>
   </tbody>
 </table>
 {% endblock %}

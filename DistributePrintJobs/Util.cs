@@ -18,6 +18,11 @@ namespace DistributePrintJobs
             return (status != JobInfo.JobStatus.Unknown && status != JobInfo.JobStatus.ReadyToPrint);
         }
 
+        public static bool IsSendable(this JobInfo.JobStatus status)
+        {
+            return (status != JobInfo.JobStatus.Unknown);
+        }
+
         public static Dictionary<string, string> DecodeUriParameters(string uriParameters)
         {
             var listRet = DecodeUriParametersAllowingDuplicates(uriParameters);
@@ -46,8 +51,8 @@ namespace DistributePrintJobs
                 }
 
                 // decode key and value
-                var key = WebUtility.HtmlDecode(keyVal[0]);
-                var val = WebUtility.HtmlDecode(keyVal[1]);
+                var key = WebUtility.UrlDecode(keyVal[0]);
+                var val = WebUtility.UrlDecode(keyVal[1]);
 
                 if (!ret.ContainsKey(key))
                 {
