@@ -103,6 +103,13 @@
     }
   }
 
+  function autobalanceCellClicked(jobID)
+  {
+    var checkbox = document.id('autobalancejob' + jobID);
+    checkbox.set('checked', !checkbox.get('checked'));
+    disableAutoRefresh();
+  }
+
   window.addEvent('domready', function() {
     document.id('autorefreshcheckbox').set('checked', true);
     $$('.autobalancecheckbox').each(function (cb) {
@@ -178,7 +185,7 @@
       <td class="removejob">
         <button class="remove" type="button" onclick="removeJob({{ job.job_id }})">&#10006;</button>
       </td>
-      <td class="autobalancejob">
+      <td class="autobalancejob" onclick="autobalanceCellClicked({{ job.job_id }})">
         <input type="checkbox" id="autobalancejob{{ job.job_id }}" class="autobalancecheckbox" value="{{ job.job_id }}" onclick="disableAutoRefresh()" />
       </td>
     </tr>
