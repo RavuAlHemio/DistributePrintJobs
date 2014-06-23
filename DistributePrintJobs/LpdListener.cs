@@ -24,6 +24,7 @@ namespace DistributePrintJobs
         private static readonly Regex ControlFileNamePattern = new Regex("^cfA([0-9]{3})(.+)$");
         private static readonly Regex DataFileNamePattern = new Regex("^dfA([0-9]{3})(.+)$");
         private static readonly Regex WhiteSpacePattern = new Regex("[ \t\x0B\x0C]+");
+        private static readonly Encoding Utf8Encoding = new UTF8Encoding(false, true);
 
         private TcpListener Listener;
 
@@ -384,7 +385,15 @@ namespace DistributePrintJobs
 
         private static string GetSingleStringArgument(byte[] command)
         {
-            var stringArgument = Encoding.Default.GetString(command, 1, command.Length - 1);
+            string stringArgument;
+            try
+            {
+                stringArgument = Utf8Encoding.GetString(command, 1, command.Length - 1);
+            }
+            catch (DecoderFallbackException)
+            {
+                stringArgument = Encoding.Default.GetString(command, 1, command.Length - 1);
+            }
             if (stringArgument.EndsWith("\n"))
             {
                 stringArgument = stringArgument.Substring(0, stringArgument.Length - 1);
@@ -603,7 +612,15 @@ namespace DistributePrintJobs
             }
 
             // decode the control file
-            var controlString = Encoding.Default.GetString(jobFiles[controlFileName]);
+            string controlString;
+            try
+            {
+                controlString = Utf8Encoding.GetString(jobFiles[controlFileName]);
+            }
+            catch (DecoderFallbackException)
+            {
+                controlString = Encoding.Default.GetString(jobFiles[controlFileName]);
+            }
 
             // parse it, with all the magic
             try
