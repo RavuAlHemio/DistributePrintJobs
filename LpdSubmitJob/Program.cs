@@ -1,14 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using DistributePrintJobs;
 
 namespace LpdSubmitJob
 {
-    class Program
+    static class Program
     {
         static void UsageAndExit()
         {
@@ -51,20 +47,24 @@ namespace LpdSubmitJob
             var fileSize = fileInfo.Length;
 
             // prepare the JobInfo
-            var jobInfo = new JobInfo();
-            jobInfo.DataFilePath = localFilename;
-            jobInfo.DataFileSize = fileSize;
-            jobInfo.DocumentName = remoteFilename;
-            jobInfo.HostName = localHostname;
-            jobInfo.Status = JobInfo.JobStatus.ReadyToPrint;
-            jobInfo.TimeOfArrival = DateTimeOffset.Now;
-            jobInfo.UserName = user;
+            var jobInfo = new JobInfo
+            {
+                DataFilePath = localFilename,
+                DataFileSize = fileSize,
+                DocumentName = remoteFilename,
+                HostName = localHostname,
+                Status = JobInfo.JobStatus.ReadyToPrint,
+                TimeOfArrival = DateTimeOffset.Now,
+                UserName = user
+            };
 
             // prepare the sender
-            var sender = new LpdSender();
-            sender.Host = host;
-            sender.Port = port;
-            sender.QueueName = queue;
+            var sender = new LpdSender
+            {
+                Host = host,
+                Port = port,
+                QueueName = queue
+            };
             sender.Send(jobInfo);
 
             Console.WriteLine("Job sent.");

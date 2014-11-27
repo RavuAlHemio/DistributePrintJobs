@@ -30,10 +30,7 @@ namespace DistributePrintJobsCLI
             Management.ReadJobs();
 
             var lpdListener = new LpdListener();
-            lpdListener.NewJobReceived += (sender, newJobInfo) =>
-            {
-                Management.AddJob(newJobInfo);
-            };
+            lpdListener.NewJobReceived += (sender, newJobInfo) => Management.AddJob(newJobInfo);
             lpdListener.Start();
 
             var httpListener = new DistributePrintJobs.HttpListener(Config.HttpListenPort);

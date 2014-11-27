@@ -48,15 +48,15 @@ namespace DistributePrintJobs
             // extension methods: see Util
         }
 
-        private static ulong NextJobID = 0;
-        private static Object NextJobIDLock = new Object();
+        private static ulong _nextJobID = 0;
+        private static readonly Object NextJobIDLock = new Object();
 
         public JobInfo()
         {
             lock (NextJobIDLock)
             {
-                JobID = NextJobID;
-                ++NextJobID;
+                JobID = _nextJobID;
+                ++_nextJobID;
             }
             Status = JobStatus.Unknown;
             TargetPrinterID = null;
@@ -68,9 +68,9 @@ namespace DistributePrintJobs
             // assign new job ID without causing a conflict
             lock (NextJobIDLock)
             {
-                if (JobID >= NextJobID)
+                if (JobID >= _nextJobID)
                 {
-                    NextJobID = JobID + 1;
+                    _nextJobID = JobID + 1;
                 }
             }
         }

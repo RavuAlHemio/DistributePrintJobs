@@ -1,7 +1,6 @@
 ﻿// Released into the public domain.
 // http://creativecommons.org/publicdomain/zero/1.0/
 
-using System;
 using System.ServiceProcess;
 using DistributePrintJobs;
 
@@ -9,8 +8,8 @@ namespace DistributePrintJobsService
 {
     public partial class DistributePrintJobsService : ServiceBase
     {
-        private LpdListener TheLpdListener;
-        private HttpListener TheHttpListener;
+        private LpdListener _lpdListener;
+        private HttpListener _httpListener;
 
         public DistributePrintJobsService()
         {
@@ -24,21 +23,18 @@ namespace DistributePrintJobsService
             Config.LoadConfig();
             Management.ReadJobs();
 
-            TheLpdListener = new LpdListener();
-            TheLpdListener.NewJobReceived += (sender, newJobInfo) =>
-            {
-                Management.AddJob(newJobInfo);
-            };
-            TheLpdListener.Start();
+            _lpdListener = new LpdListener();
+            _lpdListener.NewJobReceived += (sender, newJobInfo) => Management.AddJob(newJobInfo);
+            _lpdListener.Start();
 
-            TheHttpListener = new DistributePrintJobs.HttpListener(Config.HttpListenPort);
-            TheHttpListener.Start();
+            _httpListener = new DistributePrintJobs.HttpListener(Config.HttpListenPort);
+            _httpListener.Start();
         }
 
         protected override void OnStop()
         {
-            TheLpdListener.Stop();
-            TheHttpListener.Stop();
+            _lpdListener.Stop();
+            _httpListener.Stop();
         }
     }
 }

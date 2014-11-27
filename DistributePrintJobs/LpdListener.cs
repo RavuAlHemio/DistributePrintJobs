@@ -576,10 +576,9 @@ namespace DistributePrintJobs
                         var outFileName = Path.Combine(Config.JobDirectory, GetJobDataFilename(jobInfo.JobID, lpdDataFileName));
                         using (var outStream = new FileStream(outFileName, FileMode.CreateNew, FileAccess.Write))
                         {
-                            long? copyLength = (length == 0) ? (long?)null : (long?)length;
-                            long actualLength;
+                            long? copyLength = (length == 0) ? null : (long?)length;
 
-                            actualLength = Util.CopyStream(stream, outStream, copyLength);
+                            long actualLength = Util.CopyStream(stream, outStream, copyLength);
 
                             jobFileReferences[lpdDataFileName] = outFileName;
                             jobFileLengths[lpdDataFileName] = actualLength;
@@ -644,7 +643,7 @@ namespace DistributePrintJobs
             {
                 var client = Listener.AcceptTcpClient();
                 var stream = client.GetStream();
-                ThreadPool.QueueUserWorkItem((state) =>
+                ThreadPool.QueueUserWorkItem(state =>
                 {
                     try
                     {
@@ -665,7 +664,7 @@ namespace DistributePrintJobs
         public void Start()
         {
             Logger.Debug("starting LpdListener");
-            new Thread(new ThreadStart(ListenProc)).Start();
+            new Thread(ListenProc).Start();
         }
 
         public void Stop()

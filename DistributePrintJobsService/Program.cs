@@ -1,7 +1,6 @@
 ﻿// Released into the public domain.
 // http://creativecommons.org/publicdomain/zero/1.0/
 
-using System;
 using System.ServiceProcess;
 
 namespace DistributePrintJobsService
@@ -13,12 +12,11 @@ namespace DistributePrintJobsService
         /// </summary>
         static void Main()
         {
-            ServiceBase[] ServicesToRun;
-            ServicesToRun = new ServiceBase[]
+            var servicesToRun = new ServiceBase[]
             {
                 new DistributePrintJobsService()
             };
-            ServiceBase.Run(ServicesToRun);
+            ServiceBase.Run(servicesToRun);
         }
     }
 }

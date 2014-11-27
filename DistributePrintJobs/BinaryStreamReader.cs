@@ -1,14 +1,13 @@
 ﻿// Released into the public domain.
 // http://creativecommons.org/publicdomain/zero/1.0/
 
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
 namespace DistributePrintJobs
 {
-    class BinaryStreamReader
+    static class BinaryStreamReader
     {
         public static byte[] ReadStreamToEnd(Stream stream)
         {

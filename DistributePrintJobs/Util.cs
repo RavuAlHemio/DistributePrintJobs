@@ -5,9 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Net;
-using log4net;
 
 namespace DistributePrintJobs
 {
@@ -44,7 +42,7 @@ namespace DistributePrintJobs
             foreach (var keyValuePair in keyValuePairs)
             {
                 // key and value are split on the first equals sign
-                var keyVal = keyValuePair.Split(new char[] { '=' }, 2);
+                var keyVal = keyValuePair.Split(new [] { '=' }, 2);
                 if (keyVal.Length != 2)
                 {
                     continue;
@@ -95,9 +93,11 @@ namespace DistributePrintJobs
 
         private static void EventLogEntryMapping(log4net.Appender.EventLogAppender appender, log4net.Core.Level log4netLevel, EventLogEntryType eventLogLevel)
         {
-            var mapping = new log4net.Appender.EventLogAppender.Level2EventLogEntryType();
-            mapping.EventLogEntryType = eventLogLevel;
-            mapping.Level = log4netLevel;
+            var mapping = new log4net.Appender.EventLogAppender.Level2EventLogEntryType
+            {
+                EventLogEntryType = eventLogLevel,
+                Level = log4netLevel
+            };
             appender.AddMapping(mapping);
         }
 
@@ -114,9 +114,11 @@ namespace DistributePrintJobs
                 rootLogger.Level = log4net.Core.Level.Debug;
 
                 // log WARN and above to NT Event Log
-                var eventLogAppender = new log4net.Appender.EventLogAppender();
-                eventLogAppender.ApplicationName = "DistributePrintJobs";
-                eventLogAppender.LogName = "Application";
+                var eventLogAppender = new log4net.Appender.EventLogAppender
+                {
+                    ApplicationName = "DistributePrintJobs",
+                    LogName = "Application"
+                };
                 EventLogEntryMapping(eventLogAppender, log4net.Core.Level.Debug, EventLogEntryType.Information);
                 EventLogEntryMapping(eventLogAppender, log4net.Core.Level.Info, EventLogEntryType.Information);
                 EventLogEntryMapping(eventLogAppender, log4net.Core.Level.Warn, EventLogEntryType.Warning);

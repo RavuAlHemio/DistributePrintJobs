@@ -14,8 +14,8 @@ namespace DistributePrintJobs
     {
         private static readonly ILog Logger = LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
         private static Dictionary<ulong, JobInfo> JobDictionary = new Dictionary<ulong, JobInfo>();
-        private static Dictionary<uint, PrinterInfo> PrinterDictionary = new Dictionary<uint, PrinterInfo>();
-        private static Object ManagementLock = new Object();
+        private static readonly Dictionary<uint, PrinterInfo> PrinterDictionary = new Dictionary<uint, PrinterInfo>();
+        private static readonly Object ManagementLock = new Object();
 
         public static Dictionary<ulong, JobInfo> Jobs
         {

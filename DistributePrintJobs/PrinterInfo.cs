@@ -7,17 +7,17 @@ namespace DistributePrintJobs
 {
     public class PrinterInfo
     {
-        private static uint NextPrinterID = 0;
-        private static Object NextPrinterIDLock = new Object();
+        private static uint _nextPrinterID = 0;
+        private static readonly Object NextPrinterIDLock = new Object();
 
-        private object JobCountLock = new Object();
+        private readonly object _jobCountLock = new Object();
 
         public PrinterInfo()
         {
             lock (NextPrinterIDLock)
             {
-                PrinterID = NextPrinterID;
-                ++NextPrinterID;
+                PrinterID = _nextPrinterID;
+                ++_nextPrinterID;
             }
 
             JobCount = 0;
@@ -57,7 +57,7 @@ namespace DistributePrintJobs
         /// </summary>
         public void IncrementJobCount()
         {
-            lock (JobCountLock)
+            lock (_jobCountLock)
             {
                 ++JobCount;
             }

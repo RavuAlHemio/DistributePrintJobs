@@ -2,11 +2,10 @@
 // http://creativecommons.org/publicdomain/zero/1.0/
 
 using System;
-using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using log4net;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 namespace DistributePrintJobs
@@ -33,7 +32,7 @@ namespace DistributePrintJobs
             HttpListenPort = 8080;
             LpdListenPort = 515;
             JobDirectory = Path.Combine(Util.ProgramDirectory, "Jobs");
-            DeletionAgeMinutesOptions = new int[] { 15, 30, 60, 120 };
+            DeletionAgeMinutesOptions = new [] { 15, 30, 60, 120 };
 
             using (var r = new StreamReader(new FileStream(Path.Combine(Util.ProgramDirectory, "Config.json"), FileMode.Open, FileAccess.Read), Encoding.UTF8))
             {
@@ -55,18 +54,13 @@ namespace DistributePrintJobs
                 JobDirectory = (string)jobject["JobDirectory"];
                 if (!Path.IsPathRooted(JobDirectory))
                 {
-                    Path.Combine(Util.ProgramDirectory, JobDirectory);
+                    JobDirectory = Path.Combine(Util.ProgramDirectory, JobDirectory);
                 }
             }
 
             if (jobject["DeletionAgeMinutesOptions"] != null)
             {
-                var optList = new List<int>();
-                foreach (var opt in jobject["DeletionAgeMinutesOptions"])
-                {
-                    optList.Add((int)opt);
-                }
-                DeletionAgeMinutesOptions = optList.ToArray();
+                DeletionAgeMinutesOptions = jobject["DeletionAgeMinutesOptions"].Select(opt => (int) opt).ToArray();
             }
 
             if (jobject["Printers"] != null)
@@ -85,9 +79,11 @@ namespace DistributePrintJobs
                     ISender sender;
                     if (connection == "LPD")
                     {
-                        var lpdSender = new LpdSender();
-                        lpdSender.Host = (string)printer["Host"];
-                        lpdSender.QueueName = (string)printer["Queue"];
+                        var lpdSender = new LpdSender
+                        {
+                            Host = (string) printer["Host"],
+                            QueueName = (string) printer["Queue"]
+                        };
                         if (printer["Port"] != null)
                         {
                             lpdSender.Port = (int)printer["Port"];
@@ -99,10 +95,12 @@ namespace DistributePrintJobs
                         throw new ArgumentException("unknown printer connection '" + connection + "'");
                     }
 
-                    var printerInfo = new PrinterInfo();
-                    printerInfo.DistributionFactor = distributionFactor;
-                    printerInfo.ShortName = shortName;
-                    printerInfo.Sender = sender;
+                    var printerInfo = new PrinterInfo
+                    {
+                        DistributionFactor = distributionFactor,
+                        ShortName = shortName,
+                        Sender = sender
+                    };
                     Management.AddPrinter(printerInfo);
                 }
             }

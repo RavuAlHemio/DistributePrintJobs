@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -21,7 +22,7 @@ namespace DistributePrintJobs
         private bool StopNow { get; set; }
         private Dictionary<string, Template> TemplateCache { get; set; }
 
-        private static Dictionary<string, string> ExtensionToMimeType = new Dictionary<string, string>()
+        private static readonly Dictionary<string, string> ExtensionToMimeType = new Dictionary<string, string>
         {
             { ".css", "text/css" },
             { ".js", "text/javascript" }
@@ -59,8 +60,8 @@ namespace DistributePrintJobs
             }
 
             public int StatusCode { get { return (int)Info.Status; } }
-            public string JobId { get { return Info.JobID.ToString(); } }
-            public string TimeOfArrival { get { return Info.TimeOfArrival.ToLocalTime().ToString("dd. MM. yyyy HH:mm:ss"); } }
+            public string JobId { get { return Info.JobID.ToString(CultureInfo.InvariantCulture); } }
+            public string TimeOfArrival { get { return Info.TimeOfArrival.ToLocalTime().ToString("dd. MM. yyyy HH:mm:ss", CultureInfo.InvariantCulture); } }
             public string HostName { get { return Info.HostName; } }
             public string UserName { get { return Info.UserName; } }
             public string DocumentName { get { return Info.DocumentName; } }
@@ -121,7 +122,7 @@ namespace DistributePrintJobs
             Logger.Debug("starting HttpListener");
             StopNow = false;
             Listener.Start();
-            Listener.BeginGetContext(new AsyncCallback(ListenerCallback), Listener);
+            Listener.BeginGetContext(ListenerCallback, Listener);
         }
 
         public void Stop()
@@ -206,13 +207,7 @@ namespace DistributePrintJobs
                     }
                 }
                 var printers = Management.Printers;
-                var printerJobCountStrings = new List<string>();
-                foreach (var printerAndJobCount in printerToJobCount)
-                {
-                    var printerName = printers[printerAndJobCount.Key].ShortName;
-                    printerJobCountStrings.Add(string.Format("{0}: {1}", printerName, printerAndJobCount.Value));
-                }
-
+                var printerJobCountStrings = printerToJobCount.Select(p => string.Format("{0}: {1}", printers[p.Key].ShortName, p.Value));
                 return string.Join(" \u00B7 ", printerJobCountStrings);
             }
         }
@@ -223,7 +218,7 @@ namespace DistributePrintJobs
             var theJob = Management.Jobs[jobID];
             theJob.Status = JobInfo.JobStatus.QueuedForSend;
             theJob.TargetPrinterID = printerID;
-            ThreadPool.QueueUserWorkItem((state) =>
+            ThreadPool.QueueUserWorkItem(state =>
             {
                 Logger.DebugFormat("sending job {0} to printer {1}", jobID, printerID);
                 theJob.Status = JobInfo.JobStatus.SendingToPrinter;
@@ -236,7 +231,7 @@ namespace DistributePrintJobs
                 catch (Exception exc)
                 {
                     theJob.Status = JobInfo.JobStatus.SendingFailed;
-                    Logger.ErrorFormat("error sending job {0} to printer {1}: {2}", jobID, printerID, exc.ToString());
+                    Logger.ErrorFormat(CultureInfo.InvariantCulture, "error sending job {0} to printer {1}: {2}", jobID, printerID, exc.ToString());
                 }
             });
         }
@@ -249,11 +244,13 @@ namespace DistributePrintJobs
             {
                 if (context.Request.Url.AbsolutePath == "/jobs")
                 {
-                    var variables = new Hash();
-                    variables.Add("jobs", Management.Jobs.Values.OrderBy((k) => k.TimeOfArrival).Reverse().Select((j) => new JobInfoDrop(j)).ToArray());
-                    variables.Add("printers", Management.Printers.Values.OrderBy((k) => k.PrinterID).Select((p) => new PrinterInfoDrop(p)).ToArray());
-                    variables.Add("printer_statistics", PrinterStatsString);
-                    variables.Add("delete_times", Config.DeletionAgeMinutesOptions.Select((a) => a.ToString()));
+                    var variables = new Hash
+                    {
+                        { "jobs", Management.Jobs.Values.OrderBy(k => k.TimeOfArrival).Reverse().Select(j => new JobInfoDrop(j)).ToArray() },
+                        { "printers", Management.Printers.Values.OrderBy(k => k.PrinterID).Select(p => new PrinterInfoDrop(p)).ToArray() },
+                        { "printer_statistics", PrinterStatsString },
+                        { "delete_times", Config.DeletionAgeMinutesOptions.Select(a => a.ToString(CultureInfo.InvariantCulture)) }
+                    };
                     var rendered = TemplateCache["jobs"].Render(variables);
                     SendOkHtml(context.Response, rendered);
                 }
@@ -502,11 +499,16 @@ namespace DistributePrintJobs
                             }
                         }
 
+                        if (!leastUsedPrinterID.HasValue)
+                        {
+                            continue;
+                        }
+
                         // send that job to that printer
                         QueueSendJobToPrinter(jobID, leastUsedPrinterID.Value);
 
                         // add it to the usage factor for next round
-                        printerIDsToUsageFactors[leastUsedPrinterID.Value] += 1.0 / ((double)Management.Printers[leastUsedPrinterID.Value].DistributionFactor);
+                        printerIDsToUsageFactors[leastUsedPrinterID.Value] += 1.0 / (Management.Printers[leastUsedPrinterID.Value].DistributionFactor);
                     }
 
                     SendOkJson(context.Response);
@@ -530,7 +532,7 @@ namespace DistributePrintJobs
             var context = Listener.EndGetContext(result);
 
             // get ready for the next request
-            Listener.BeginGetContext(new AsyncCallback(ListenerCallback), Listener);
+            Listener.BeginGetContext(ListenerCallback, Listener);
 
             try
             {

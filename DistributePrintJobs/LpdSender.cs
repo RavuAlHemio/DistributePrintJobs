@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Net.Sockets;
 using System.Text;
@@ -66,7 +67,6 @@ namespace DistributePrintJobs
             var stream = client.GetStream();
 
             var message = new List<byte>();
-            int b;
 
             int thisJobNumber = IncrementJobCounter();
             var dataFileName = string.Format("dfA{0:D3}{1}", thisJobNumber, job.HostName);
@@ -81,7 +81,7 @@ namespace DistributePrintJobs
             message.Clear();
 
             // read ACK
-            b = stream.ReadByte();
+            int b = stream.ReadByte();
             if (b != 0x00)
             {
                 Logger.WarnFormat("got 0x{0:X2} after initiating the print request", b);
@@ -101,7 +101,7 @@ namespace DistributePrintJobs
             // send the control file metadata
             Logger.Debug("sending the control file metadata");
             message.Add(0x02);
-            message.AddRange(Encoding.ASCII.GetBytes(controlFileBytes.Length.ToString()));
+            message.AddRange(Encoding.ASCII.GetBytes(controlFileBytes.Length.ToString(CultureInfo.InvariantCulture)));
             message.Add(0x20);
             message.AddRange(Encoding.ASCII.GetBytes(controlFileName));
             message.Add(0x0A);
@@ -130,7 +130,7 @@ namespace DistributePrintJobs
 
             Logger.Debug("sending the data file metadata");
             message.Add(0x03);
-            message.AddRange(Encoding.ASCII.GetBytes(job.DataFileSize.ToString()));
+            message.AddRange(Encoding.ASCII.GetBytes(job.DataFileSize.ToString(CultureInfo.InvariantCulture)));
             message.Add(0x20);
             message.AddRange(Encoding.ASCII.GetBytes(dataFileName));
             message.Add(0x0A);
