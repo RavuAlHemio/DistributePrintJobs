@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Threading;
 using DotLiquid;
@@ -18,7 +19,7 @@ namespace DistributePrintJobs
     {
         private static readonly ILog Logger = LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-        private System.Net.HttpListener Listener { get; set; }
+        private HttpListener Listener { get; set; }
         private bool StopNow { get; set; }
         private Dictionary<string, Template> TemplateCache { get; set; }
 
@@ -104,7 +105,7 @@ namespace DistributePrintJobs
 
         public HttpListenerResponder(int listenPort)
         {
-            Listener = new System.Net.HttpListener();
+            Listener = new HttpListener();
             Listener.Prefixes.Add("http://+:" + listenPort + "/");
 
             Template.FileSystem = new DotLiquid.FileSystems.LocalFileSystem(Path.Combine(Util.ProgramDirectory, "Templates"));
@@ -132,7 +133,7 @@ namespace DistributePrintJobs
             Listener.Stop();
         }
 
-        private void SendOk(System.Net.HttpListenerResponse response, string mimeType, byte[] body)
+        private void SendOk(HttpListenerResponse response, string mimeType, byte[] body)
         {
             response.StatusCode = 200;
             response.StatusDescription = "OK";
@@ -143,17 +144,17 @@ namespace DistributePrintJobs
             response.OutputStream.Close();
         }
 
-        private void SendOkHtml(System.Net.HttpListenerResponse response, string htmlText)
+        private void SendOkHtml(HttpListenerResponse response, string htmlText)
         {
             SendOk(response, "text/html; charset=utf-8", Encoding.UTF8.GetBytes(htmlText));
         }
 
-        private void SendOkJson(System.Net.HttpListenerResponse response)
+        private void SendOkJson(HttpListenerResponse response)
         {
             SendOk(response, "application/json", Encoding.UTF8.GetBytes("{ \"status\": \"success\" }"));
         }
 
-        private void SendError(System.Net.HttpListenerResponse response, int code, string description, string body)
+        private void SendError(HttpListenerResponse response, int code, string description, string body)
         {
             response.StatusCode = code;
             response.StatusDescription = description;
@@ -170,22 +171,22 @@ namespace DistributePrintJobs
             response.OutputStream.Close();
         }
 
-        private void Send400MissingParameter(System.Net.HttpListenerResponse response)
+        private void Send400MissingParameter(HttpListenerResponse response)
         {
             SendError(response, 400, "Bad Request", "Missing parameter!");
         }
 
-        private void Send400MalformedParameter(System.Net.HttpListenerResponse response)
+        private void Send400MalformedParameter(HttpListenerResponse response)
         {
             SendError(response, 400, "Bad Request", "Malformed parameter!");
         }
 
-        private void Send400ParameterResourceNonexistent(System.Net.HttpListenerResponse response)
+        private void Send400ParameterResourceNonexistent(HttpListenerResponse response)
         {
             SendError(response, 400, "Bad Request", "The requested resource does not exist!");
         }
 
-        private void Send404(System.Net.HttpListenerResponse response)
+        private void Send404(HttpListenerResponse response)
         {
             SendError(response, 404, "Not Found", "Not found!");
         }
@@ -236,7 +237,7 @@ namespace DistributePrintJobs
             });
         }
 
-        private void HandleRequest(System.Net.HttpListenerContext context)
+        private void HandleRequest(HttpListenerContext context)
         {
             Logger.InfoFormat("{0} {1}", context.Request.HttpMethod, context.Request.Url.AbsolutePath);
 
