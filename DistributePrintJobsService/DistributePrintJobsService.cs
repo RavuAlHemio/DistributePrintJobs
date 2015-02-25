@@ -9,7 +9,7 @@ namespace DistributePrintJobsService
     public partial class DistributePrintJobsService : ServiceBase
     {
         private LpdListener _lpdListener;
-        private HttpListener _httpListener;
+        private HttpListenerResponder _httpListener;
 
         public DistributePrintJobsService()
         {
@@ -27,7 +27,7 @@ namespace DistributePrintJobsService
             _lpdListener.NewJobReceived += (sender, newJobInfo) => Management.AddJob(newJobInfo);
             _lpdListener.Start();
 
-            _httpListener = new DistributePrintJobs.HttpListener(Config.HttpListenPort);
+            _httpListener = new HttpListenerResponder(Config.HttpListenPort);
             _httpListener.Start();
         }
 

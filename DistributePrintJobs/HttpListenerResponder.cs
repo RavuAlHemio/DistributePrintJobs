@@ -14,7 +14,7 @@ using Newtonsoft.Json;
 
 namespace DistributePrintJobs
 {
-    public class HttpListener
+    public class HttpListenerResponder
     {
         private static readonly ILog Logger = LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
@@ -102,7 +102,7 @@ namespace DistributePrintJobs
             }
         }
 
-        public HttpListener(int listenPort)
+        public HttpListenerResponder(int listenPort)
         {
             Listener = new System.Net.HttpListener();
             Listener.Prefixes.Add("http://+:" + listenPort + "/");

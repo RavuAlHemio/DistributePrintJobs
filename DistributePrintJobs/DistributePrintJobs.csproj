@@ -64,7 +64,7 @@
   <ItemGroup>
     <Compile Include="BinaryStreamReader.cs" />
     <Compile Include="Config.cs" />
-    <Compile Include="HttpListener.cs" />
+    <Compile Include="HttpListenerResponder.cs" />
     <Compile Include="ISender.cs" />
     <Compile Include="PrinterInfo.cs" />
     <Compile Include="JobInfo.cs" />
